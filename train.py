@@ -191,6 +191,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     else:
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
+    # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
+    # training keeps running on the online weights.
+    ema_decay = 0.999
+    ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+
     best_state = None
     best_epoch = -1
     bad = 0
@@ -205,10 +210,21 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             loss = loss_fn(model(x), y)
             loss.backward()
             optimizer.step()
+            with torch.no_grad():
+                msd = model.state_dict()
+                for k in ema_state:
+                    if msd[k].dtype.is_floating_point:
+                        ema_state[k].mul_(ema_decay).add_(
+                            msd[k].detach(), alpha=1.0 - ema_decay)
+                    else:
+                        ema_state[k].copy_(msd[k])
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
 
+        # Validate using EMA weights (swap in, then restore).
+        online_state = deepcopy(model.state_dict())
+        model.load_state_dict(ema_state)
         model.eval()
         val_loss_sum, val_batches = 0.0, 0
         y_true_v, y_prob_v = [], []
@@ -221,6 +237,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 probs = torch.sigmoid(logits).cpu().numpy()
                 y_prob_v.extend(probs.tolist())
                 y_true_v.extend(y.numpy().tolist())
+        model.load_state_dict(online_state)
         val_loss = val_loss_sum / max(val_batches, 1)
         has_both = len(set(y_true_v)) > 1
         val_auc = float(roc_auc_score(y_true_v, y_prob_v)) if has_both else 0.0
@@ -238,7 +255,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         score = val_auc if es_metric == "val_auc" else val_loss
         if is_better(score, best_score):
             best_score = score
-            best_state = deepcopy(model.state_dict())
+            best_state = deepcopy(ema_state)
             best_epoch = epoch
             bad = 0
         else:
