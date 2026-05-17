@@ -159,6 +159,9 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
+        # iter43: sigmoid skip-gate mix between gated pool and mean pool.
+        # Init=0 -> sigmoid(0)=0.5 -> equal mix of both pools at start.
+        self.skip_gate = nn.Parameter(torch.zeros(1))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         # iter6: per-sample modality token dropout (zero a whole modality
@@ -178,11 +181,15 @@ class MultiModalGMLPFromFlat(nn.Module):
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
+        # iter43: convex mix of gated_pool and mean_pool via sigmoid(skip_gate).
+        mean_pool = X.mean(dim=1)
         if self.use_gated_pool:
             w = torch.softmax(self.alpha, dim=0)
-            Xp = (X * w.view(1, -1, 1)).sum(dim=1)
+            gated_pool = (X * w.view(1, -1, 1)).sum(dim=1)
         else:
-            Xp = X.mean(dim=1)
+            gated_pool = mean_pool
+        gate = torch.sigmoid(self.skip_gate)
+        Xp = gate * gated_pool + (1.0 - gate) * mean_pool
         Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
