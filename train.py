@@ -160,9 +160,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
         self.head = nn.Linear(d_model, 1)
-        # iter37: head dropout 0.20 -> 0.30 (override BASE_CONFIG "dropout" only
-        # at the head; inner architecture untouched).
-        self.drop = nn.Dropout(0.30)
+        self.drop = nn.Dropout(dropout)
         # iter6: per-sample modality token dropout (zero a whole modality
         # token with prob p) — encourages cross-modal redundancy / prevents
         # single-modality overfit. Active in training only.
