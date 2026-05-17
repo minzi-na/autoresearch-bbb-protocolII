@@ -141,6 +141,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.pool_query = nn.Parameter(torch.zeros(d_model))
             self.pool_logits = nn.Parameter(torch.zeros(4))
         self.head = nn.Linear(d_model, 1)
+        nn.init.constant_(self.head.bias, 0.819)
         self.drop = nn.Dropout(dropout)
         self.mod_drop_p = 0.075
 
