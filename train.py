@@ -189,7 +189,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             Xp = pooled.mean(dim=1)
         else:
             Xp = X.mean(dim=1)
-        Xp = self.drop(Xp)
+        Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
 
