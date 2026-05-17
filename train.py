@@ -118,6 +118,10 @@ class gMLPBlock(nn.Module):
         self.channel_proj1 = nn.Linear(d_model, d_ffn * 2)
         self.channel_proj2 = nn.Linear(d_ffn, d_model)
         self.sgu = SpatialGatingUnit(d_ffn, seq_len)
+        # iter34: per-block per-channel LayerScale on the residual update.
+        # Init=1.0 is identity at start; learnable scale lets each block
+        # selectively damp noisy channels or amplify informative ones.
+        self.layer_scale = nn.Parameter(torch.ones(d_model))
 
     def forward(self, x):
         residual = x
@@ -125,7 +129,7 @@ class gMLPBlock(nn.Module):
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
-        return x + residual
+        return self.layer_scale * x + residual
 
 
 class gMLP(nn.Module):
