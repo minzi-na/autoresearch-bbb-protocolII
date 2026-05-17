@@ -6,6 +6,15 @@ Retrains 10 seeds for one combo at the current architecture, then evaluates
 each trained model on all 5 holdout subsets. Writes a JSON report and appends
 a summary table to results/<combo>/architecture_log.md.
 
+Aggregation:
+  - val (scaffold split):  10-seed mean ± std of per-seed val_roc_auc / mcc.
+                           Matches evaluate_combo.py's keep/discard criterion.
+  - holdout subsets:       soft voting ensemble. For each subset, collect the
+                           predicted probability vector from each of the 10
+                           seed models, average them, then compute ROC-AUC /
+                           MCC / AUPRC on the averaged probabilities. This
+                           gives one ensemble metric per subset.
+
 Run this ONLY after evaluate_combo.py has marked a KEEP iteration that the
 agent believes is the new best. Not part of the iteration loop.
 
@@ -35,6 +44,11 @@ import pandas as pd
 import torch
 import torch.utils.data as data
 
+from sklearn.metrics import (
+    matthews_corrcoef, accuracy_score, precision_score, recall_score,
+    f1_score, confusion_matrix, roc_auc_score, average_precision_score,
+)
+
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -63,7 +77,8 @@ def git_head_commit() -> str:
         return "unknown"
 
 
-def eval_on_subset(model, X_sub, y_sub, batch_size: int):
+def predict_probs(model, X_sub, y_sub, batch_size: int):
+    """Return (y_true, y_prob) for one subset. Probs are sigmoid outputs."""
     loader = data.DataLoader(
         data.TensorDataset(
             torch.tensor(X_sub, dtype=torch.float32),
@@ -71,8 +86,38 @@ def eval_on_subset(model, X_sub, y_sub, batch_size: int):
         ),
         batch_size=batch_size, shuffle=False,
     )
-    metrics, _, _ = train_mod.eval_model(model, loader)
-    return metrics
+    model.eval()
+    device = next(model.parameters()).device
+    y_true, y_prob = [], []
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            probs = torch.sigmoid(model(x)).cpu().numpy()
+            y_prob.extend(probs.tolist())
+            y_true.extend(y.numpy().tolist())
+    return np.array(y_true, dtype=np.int64), np.array(y_prob, dtype=np.float64)
+
+
+def metrics_from_probs(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
+    """Compute classification metrics from probabilities + labels (single set)."""
+    y_pred = (y_prob > 0.5).astype(int)
+    cm = confusion_matrix(y_true, y_pred)
+    if cm.size == 4:
+        tn, fp, _, _ = cm.ravel()
+        specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+    else:
+        specificity = 0.0
+    has_both = len(set(y_true.tolist())) > 1
+    return {
+        "accuracy":    round(float(accuracy_score(y_true, y_pred)), 6),
+        "precision":   round(float(precision_score(y_true, y_pred, zero_division=0)), 6),
+        "recall":      round(float(recall_score(y_true, y_pred, zero_division=0)), 6),
+        "f1":          round(float(f1_score(y_true, y_pred, zero_division=0)), 6),
+        "roc_auc":     round(float(roc_auc_score(y_true, y_prob) if has_both else 0.0), 6),
+        "mcc":         round(float(matthews_corrcoef(y_true, y_pred)), 6),
+        "auprc":       round(float(average_precision_score(y_true, y_prob) if has_both else 0.0), 6),
+        "specificity": round(float(specificity), 6),
+    }
 
 
 def main():
@@ -91,6 +136,8 @@ def main():
 
     print(f"[Plan] combo={args.combo}  iter={args.iter_id}  commit={commit}")
     print(f"[Plan] seeds={seeds}  subsets={SUBSETS}")
+    print(f"[Plan] val_auc aggregation: 10-seed mean ± std")
+    print(f"[Plan] holdout aggregation: soft voting ensemble (probs averaged across seeds)")
 
     print("[Data] Loading pool features ...")
     pool_smiles, pool_labels, _, pool_feats = prepare.load_pool_features()
@@ -108,8 +155,14 @@ def main():
     fp_dim = prepare.FP_DIM
     bs = train_mod.BASE_CONFIG["batch_size"]
 
-    t0 = time.time()
+    # Per-seed val metrics + per-seed subset probabilities
     per_seed = []
+    # Accumulator for soft voting: subset → list of per-seed prob vectors
+    subset_prob_stacks = {s: [] for s in SUBSETS}
+    # Ground-truth labels (same across seeds — captured once)
+    subset_y_true = {s: sub_data[s][1] for s in SUBSETS}
+
+    t0 = time.time()
     for i, seed in enumerate(seeds):
         print(f"\n[{i+1}/{len(seeds)}] seed={seed}")
         train_idx, val_idx = prepare.scaffold_split_train_val(
@@ -125,22 +178,23 @@ def main():
               f"val_mcc={val_metrics['mcc']:.6f}  "
               f"best_epoch={train_info['best_epoch']}")
 
-        # Evaluate on each subset (applying the fitted rdkit scaler if any)
-        subset_metrics = {}
+        # Per-seed subset metrics (for debugging / variance info, kept in JSON)
+        per_seed_subsets = {}
         for s in SUBSETS:
             _, y_sub, X_sub = sub_data[s]
             X_sub_in = X_sub
             if scaler is not None and "rdkit" in combo_tuple:
                 X_sub_in = train_mod.apply_rdkit_scaler(X_sub, combo_tuple, fp_dim, scaler)
-            m = eval_on_subset(model, X_sub_in, y_sub, bs)
-            subset_metrics[s] = m
-            print(f"    {s:>8s}: roc_auc={m['roc_auc']:.6f}  mcc={m['mcc']:.6f}  "
-                  f"auprc={m['auprc']:.6f}")
+            y_true, y_prob = predict_probs(model, X_sub_in, y_sub, bs)
+            subset_prob_stacks[s].append(y_prob)
+            m = metrics_from_probs(y_true, y_prob)
+            per_seed_subsets[s] = m
+            print(f"    {s:>8s}: per-seed roc_auc={m['roc_auc']:.6f}  mcc={m['mcc']:.6f}")
 
         per_seed.append({
             "seed": seed,
             "val":  val_metrics,
-            "subsets": subset_metrics,
+            "subsets": per_seed_subsets,
             "best_epoch": train_info["best_epoch"],
         })
 
@@ -151,16 +205,37 @@ def main():
 
     wall_min = (time.time() - t0) / 60.0
 
-    def agg(metric_path):
-        # metric_path: tuple like ("subsets", "internal", "roc_auc") or ("val", "roc_auc")
-        vals = []
-        for r in per_seed:
-            v = r
-            for k in metric_path:
-                v = v[k]
-            vals.append(float(v))
-        a = np.array(vals)
-        return float(a.mean()), float(a.std(ddof=0))
+    # ── Aggregate ───────────────────────────────────────────────────────────
+    def per_seed_mean_std(metric_key):
+        """val metric: mean ± std across seeds."""
+        vals = np.array([float(r["val"][metric_key]) for r in per_seed])
+        return float(vals.mean()), float(vals.std(ddof=0))
+
+    # val: 10-seed mean ± std (matches keep/discard criterion in evaluate_combo.py)
+    val_mean_auc, val_std_auc = per_seed_mean_std("roc_auc")
+    val_mean_mcc, val_std_mcc = per_seed_mean_std("mcc")
+
+    # holdout subsets: soft voting ensemble
+    subset_summary = {}
+    for s in SUBSETS:
+        probs_stack = np.stack(subset_prob_stacks[s], axis=0)        # (n_seeds, n_subset)
+        ensemble_probs = probs_stack.mean(axis=0)                     # (n_subset,)
+        ens_metrics = metrics_from_probs(subset_y_true[s], ensemble_probs)
+
+        # Also report per-seed mean ± std as secondary debug info
+        per_seed_aucs = np.array([float(r["subsets"][s]["roc_auc"]) for r in per_seed])
+        per_seed_mccs = np.array([float(r["subsets"][s]["mcc"])     for r in per_seed])
+        per_seed_prs  = np.array([float(r["subsets"][s]["auprc"])   for r in per_seed])
+
+        subset_summary[s] = {
+            "ensemble": ens_metrics,
+            "per_seed_mean_roc_auc": round(float(per_seed_aucs.mean()), 6),
+            "per_seed_std_roc_auc":  round(float(per_seed_aucs.std(ddof=0)), 6),
+            "per_seed_mean_mcc":     round(float(per_seed_mccs.mean()), 6),
+            "per_seed_std_mcc":      round(float(per_seed_mccs.std(ddof=0)), 6),
+            "per_seed_mean_auprc":   round(float(per_seed_prs.mean()), 6),
+            "per_seed_std_auprc":    round(float(per_seed_prs.std(ddof=0)), 6),
+        }
 
     summary = {
         "iter":   args.iter_id,
@@ -171,22 +246,17 @@ def main():
         "n_seeds": len(seeds),
         "wall_time_min": round(wall_min, 2),
         "val": {
-            "mean_roc_auc": agg(("val", "roc_auc"))[0],
-            "std_roc_auc":  agg(("val", "roc_auc"))[1],
-            "mean_mcc":     agg(("val", "mcc"))[0],
-            "std_mcc":      agg(("val", "mcc"))[1],
+            "aggregation": "per_seed_mean_std",
+            "mean_roc_auc": round(val_mean_auc, 6),
+            "std_roc_auc":  round(val_std_auc, 6),
+            "mean_mcc":     round(val_mean_mcc, 6),
+            "std_mcc":      round(val_std_mcc, 6),
         },
-        "subsets": {},
+        "subsets": {
+            "aggregation": "soft_voting_ensemble",
+            **subset_summary,
+        },
     }
-    for s in SUBSETS:
-        m_auc, sd_auc = agg(("subsets", s, "roc_auc"))
-        m_mcc, sd_mcc = agg(("subsets", s, "mcc"))
-        m_pr,  sd_pr  = agg(("subsets", s, "auprc"))
-        summary["subsets"][s] = {
-            "mean_roc_auc": round(m_auc, 6), "std_roc_auc": round(sd_auc, 6),
-            "mean_mcc":     round(m_mcc, 6), "std_mcc":     round(sd_mcc, 6),
-            "mean_auprc":   round(m_pr, 6),  "std_auprc":   round(sd_pr, 6),
-        }
 
     out_dir = REPO_ROOT / "results" / args.combo / "holdout_eval"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -196,19 +266,21 @@ def main():
     print(f"\n[Output] holdout eval JSON: {out_json}")
 
     # Append a row to architecture_log.md
+    # val: mean±std, subsets: ensemble single value (no ± since ensemble is point estimate)
     log_path = REPO_ROOT / "results" / args.combo / "architecture_log.md"
     if not log_path.exists():
         log_path.write_text(
             f"# {args.combo} — architecture log\n\n"
+            f"val: per-seed mean±std  |  subsets (int/ext/nn03/nn05/total): "
+            f"soft voting ensemble single values.\n\n"
             "| iter | commit | val_auc | int | ext | nn03 | nn05 | total | note |\n"
             "|------|--------|---------|-----|-----|------|------|-------|------|\n"
         )
     row = (
         f"| {args.iter_id} | {commit} | "
-        f"{summary['val']['mean_roc_auc']:.4f}±{summary['val']['std_roc_auc']:.4f} | "
+        f"{val_mean_auc:.4f}±{val_std_auc:.4f} | "
         + " | ".join(
-            f"{summary['subsets'][s]['mean_roc_auc']:.4f}±{summary['subsets'][s]['std_roc_auc']:.4f}"
-            for s in SUBSETS
+            f"{subset_summary[s]['ensemble']['roc_auc']:.4f}" for s in SUBSETS
         )
         + f" | {args.note} |\n"
     )
@@ -218,11 +290,13 @@ def main():
 
     print("\n" + "=" * 60)
     print(f"combo={args.combo}  iter={args.iter_id}  commit={commit}")
-    print(f"val   roc_auc = {summary['val']['mean_roc_auc']:.6f} ± "
-          f"{summary['val']['std_roc_auc']:.6f}")
+    print(f"val (10-seed mean±std) roc_auc = {val_mean_auc:.6f} ± {val_std_auc:.6f}")
     for s in SUBSETS:
-        m = summary['subsets'][s]
-        print(f"{s:>8s} roc_auc = {m['mean_roc_auc']:.6f} ± {m['std_roc_auc']:.6f}")
+        ens = subset_summary[s]["ensemble"]
+        ps_mean = subset_summary[s]["per_seed_mean_roc_auc"]
+        ps_std  = subset_summary[s]["per_seed_std_roc_auc"]
+        print(f"{s:>8s} ensemble roc_auc = {ens['roc_auc']:.6f}  "
+              f"(per-seed {ps_mean:.6f} ± {ps_std:.6f})")
     print(f"wall_time = {wall_min:.2f} min")
     print("=" * 60)
 
