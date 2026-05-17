@@ -148,8 +148,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
-        if self.training:
-            X = X + torch.randn_like(X) * 0.01
         if self.training and self.mod_drop_p > 0:
             B = X.shape[0]
             mask = (torch.rand(B, self.seq_len, device=X.device) > self.mod_drop_p).float()
