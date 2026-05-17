@@ -140,6 +140,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
             self.skip_gate = nn.Parameter(torch.zeros(1))
         self.head = nn.Linear(d_model, 1)
+        nn.init.constant_(self.head.bias, 0.819)
         self.drop = nn.Dropout(dropout)
         self.mod_drop_p = 0.075
 
