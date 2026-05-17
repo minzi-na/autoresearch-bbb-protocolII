@@ -124,8 +124,15 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.seq_len   = len(self.mod_names)
         self.use_gated_pool = use_gated_pool
 
+        # iter11: 2-layer per-modality projection with GELU between layers
+        # — adds capacity for each modality to learn its own non-linear map
+        # to the shared d_model token space.
         self.proj = nn.ModuleDict({
-            name: nn.Linear(in_dim, d_model)
+            name: nn.Sequential(
+                nn.Linear(in_dim, d_model),
+                nn.GELU(),
+                nn.Linear(d_model, d_model),
+            )
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
