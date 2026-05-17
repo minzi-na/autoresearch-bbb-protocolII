@@ -227,21 +227,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     bad = 0
     epoch_log = []
 
-    # iter45: mixup data augmentation. Each batch, sample lam ~ Beta(a, a)
-    # and form (lam*x + (1-lam)*x[perm], lam*y + (1-lam)*y[perm]). BCE with
-    # logits naturally accepts soft labels.
-    mixup_alpha = 0.2
-
     for epoch in range(num_epochs):
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
-            if mixup_alpha > 0:
-                lam = float(np.random.beta(mixup_alpha, mixup_alpha))
-                idx = torch.randperm(x.size(0), device=x.device)
-                x = lam * x + (1.0 - lam) * x[idx]
-                y = lam * y + (1.0 - lam) * y[idx]
             optimizer.zero_grad()
             loss = loss_fn(model(x), y)
             loss.backward()
