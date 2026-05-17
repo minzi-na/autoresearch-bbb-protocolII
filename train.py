@@ -128,6 +128,12 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
+        # iter5: LayerNorm after each per-modality projection — equalizes
+        # token-scale across MACCS/Avalon (bits) vs scage2/mole (pretrained
+        # embeddings) before the backbone sees them.
+        self.proj_norm = nn.ModuleDict({
+            name: nn.LayerNorm(d_model) for name in self.mod_names
+        })
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
@@ -138,7 +144,7 @@ class MultiModalGMLPFromFlat(nn.Module):
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
-        tokens = [self.proj[name](chunk)
+        tokens = [self.proj_norm[name](self.proj[name](chunk))
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = self.backbone(X)
