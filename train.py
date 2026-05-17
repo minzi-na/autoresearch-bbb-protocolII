@@ -79,6 +79,10 @@ class SpatialGatingUnit(nn.Module):
     # d_ffn=1048 is divisible by 2 (524) and 4 (262); 2 is the conservative
     # choice given seq_len=4 (per-head mixer is still small).
     SGU_N_HEADS = 2
+    # iter22: per-sample DropPath on the v-mixing path. When dropped,
+    # v_out is replaced by 1.0 (identity multiplier), so SGU output collapses
+    # to `u` alone — bypassing spatial mixing. Train-time only.
+    DROP_V_PATH = 0.10
 
     def __init__(self, d_ffn, seq_len):
         super().__init__()
@@ -100,6 +104,10 @@ class SpatialGatingUnit(nn.Module):
             [proj(vc) for proj, vc in zip(self.spatial_proj, v_chunks)],
             dim=-1,
         )
+        if self.training and self.DROP_V_PATH > 0:
+            keep = (torch.rand(x.size(0), 1, 1, device=x.device)
+                    >= self.DROP_V_PATH).float()
+            v_out = keep * v_out + (1.0 - keep)
         return u * v_out
 
 
