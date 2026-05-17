@@ -115,6 +115,37 @@ class gMLP(nn.Module):
         return self.model(x)
 
 
+# iter8: Cross-modal FiLM. Each side (fp/embed) generates an affine
+# scale/bias from the mean of the OTHER side's tokens and conditions its
+# own tokens. Safe init: all weights+biases zero ⇒ FiLM is the identity
+# at initialization (scale 1, shift 0), so the layer can only add value.
+_FP_MODS_FILM  = {"maccs", "avalon", "ecfp", "rdkit", "tt"}
+_EMB_MODS_FILM = {"scage1", "scage2", "mole"}
+
+
+class CrossModalFiLM(nn.Module):
+    def __init__(self, d_model, fp_idx, emb_idx):
+        super().__init__()
+        self.embed_to_fp = nn.Linear(d_model, d_model * 2)
+        self.fp_to_embed = nn.Linear(d_model, d_model * 2)
+        nn.init.zeros_(self.embed_to_fp.weight)
+        nn.init.zeros_(self.embed_to_fp.bias)
+        nn.init.zeros_(self.fp_to_embed.weight)
+        nn.init.zeros_(self.fp_to_embed.bias)
+        self.fp_idx = list(fp_idx)
+        self.emb_idx = list(emb_idx)
+
+    def forward(self, X):
+        fp_sum  = X[:, self.fp_idx,  :].mean(dim=1)
+        emb_sum = X[:, self.emb_idx, :].mean(dim=1)
+        gf, bf = self.embed_to_fp(emb_sum).chunk(2, dim=-1)
+        ge, be = self.fp_to_embed(fp_sum).chunk(2, dim=-1)
+        X = X.clone()
+        X[:, self.fp_idx,  :] = (1.0 + gf.unsqueeze(1)) * X[:, self.fp_idx,  :] + bf.unsqueeze(1)
+        X[:, self.emb_idx, :] = (1.0 + ge.unsqueeze(1)) * X[:, self.emb_idx, :] + be.unsqueeze(1)
+        return X
+
+
 class MultiModalGMLPFromFlat(nn.Module):
     def __init__(self, mod_dims: OrderedDict, d_model=512, d_ffn=1024,
                  depth=4, dropout=0.2, use_gated_pool=True):
@@ -139,6 +170,12 @@ class MultiModalGMLPFromFlat(nn.Module):
         # token with prob p) — encourages cross-modal redundancy / prevents
         # single-modality overfit. Active in training only.
         self.mod_drop_p = 0.15
+        # iter8: category-based cross-modal FiLM (fp ↔ embed). Identity at init.
+        fp_idx  = [i for i, n in enumerate(self.mod_names) if n in _FP_MODS_FILM]
+        emb_idx = [i for i, n in enumerate(self.mod_names) if n in _EMB_MODS_FILM]
+        self.use_film = len(fp_idx) > 0 and len(emb_idx) > 0
+        if self.use_film:
+            self.film = CrossModalFiLM(d_model, fp_idx, emb_idx)
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
@@ -150,6 +187,8 @@ class MultiModalGMLPFromFlat(nn.Module):
             mask = (torch.rand(B, self.seq_len, device=X.device)
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
+        if self.use_film:
+            X = self.film(X)
         X = self.backbone(X)
         if self.use_gated_pool:
             w = torch.softmax(self.alpha, dim=0)
