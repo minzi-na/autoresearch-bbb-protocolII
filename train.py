@@ -15,7 +15,6 @@ Do NOT edit:
   - device handling
 """
 
-import math
 import random
 from copy import deepcopy
 from collections import OrderedDict
@@ -218,14 +217,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     bad = 0
     epoch_log = []
 
-    warmup_epochs = 2
-    def lr_lambda(epoch):
-        if epoch < warmup_epochs:
-            return (epoch + 1) / warmup_epochs
-        p = (epoch - warmup_epochs) / max(1, num_epochs - warmup_epochs)
-        return 0.5 * (1 + math.cos(math.pi * p)) * 0.99 + 0.01
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-
     ema_decay = 0.9
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
@@ -242,7 +233,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
-        scheduler.step()
 
         with torch.no_grad():
             for k, v in model.state_dict().items():
