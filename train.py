@@ -144,11 +144,13 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
-        self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
+        # iter14: prepend a learnable CLS token before the backbone and pool
+        # from its final state. Backbone (and SGU Conv1d) is built with
+        # seq_len+1 to accommodate it.
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
+        self.backbone = gMLP(seq_len=self.seq_len + 1, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
-        if use_gated_pool:
-            self.alpha = nn.Parameter(torch.zeros(self.seq_len))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         # iter6: per-sample modality token dropout (zero a whole modality
@@ -166,10 +168,12 @@ class MultiModalGMLPFromFlat(nn.Module):
             mask = (torch.rand(B, self.seq_len, device=X.device)
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
+        # Prepend CLS (never dropped). Resulting sequence length = seq_len+1.
+        cls = self.cls_token.expand(X.size(0), -1, -1)
+        X = torch.cat([cls, X], dim=1)
         X = self.backbone(X)
         if self.use_gated_pool:
-            w = torch.softmax(self.alpha, dim=0)
-            Xp = (X * w.view(1, -1, 1)).sum(dim=1)
+            Xp = X[:, 0, :]
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
