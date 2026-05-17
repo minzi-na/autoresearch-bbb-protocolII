@@ -203,25 +203,10 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
     # iter38: replace the passed-in Adam (wd=1e-5 ~ effectively 0) with AdamW
-    # using decoupled wd — a real weight-decay regularizer to complement
+    # using decoupled wd=0.01 — a real weight-decay regularizer to complement
     # EMA / DropPath / mod_drop, with the same lr as before.
-    # iter58: split params into two groups — weight matrices get wd=0.01,
-    # bias and LayerNorm params get wd=0 (modern best practice; applying wd
-    # to norm/bias damages calibration).
     lr = optimizer.param_groups[0]["lr"]
-    decay_params, no_decay_params = [], []
-    for name, p in model.named_parameters():
-        if (p.ndim <= 1) or name.endswith(".bias") or ("norm" in name.lower()):
-            no_decay_params.append(p)
-        else:
-            decay_params.append(p)
-    optimizer = optim.AdamW(
-        [
-            {"params": decay_params, "weight_decay": 0.01},
-            {"params": no_decay_params, "weight_decay": 0.0},
-        ],
-        lr=lr,
-    )
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
