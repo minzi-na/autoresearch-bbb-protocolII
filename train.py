@@ -78,7 +78,7 @@ class SpatialGatingUnit(nn.Module):
         super().__init__()
         self.norm = nn.LayerNorm(d_ffn)
         self.spatial_proj = nn.Conv1d(seq_len, seq_len, kernel_size=1)
-        nn.init.constant_(self.spatial_proj.bias, 1.0)
+        nn.init.constant_(self.spatial_proj.bias, 1.5)
         self.gate_scale = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
