@@ -56,15 +56,26 @@ For each iteration `N`:
    Use Bash with `run_in_background=true`. **Do NOT poll or stream output.**
    Wait for the completion notification, then read the appended TSV row.
 7. Inspect the new row's `keep` field:
-   - `True`  → leave commit in place. Move on to iter `N+1`.
+   - `True`  → leave commit in place. Proceed to step 8 (mandatory holdout eval).
    - `False` → **`git revert <commit>` only.** Do NOT use `git reset --hard`.
      The discarded commit must remain in history so that `git show <commit>`
      resolves the TSV row's commit hash months later for analysis or to spawn
      a variant of a failed attempt. The TSV row itself stays as well —
-     discarded attempts are part of the search log.
-8. (Optional, manual) When you believe a kept iteration is the current global
-   best of the search, run `final_holdout_eval.py` once for the 5-subset
-   breakdown. This is reporting only.
+     discarded attempts are part of the search log. Skip step 8 and proceed
+     to iter `N+1`.
+8. **Mandatory after every keep — run final_holdout_eval.py in background:**
+   ```
+   conda run -n rapids-25.02 python final_holdout_eval.py \
+     --combo <combo> --iter-id <N> --note "<short>"
+   ```
+   Use Bash with `run_in_background=true`. Wait for the completion
+   notification (~12 min, same wall-time as evaluate_combo.py since it
+   retrains 10 seeds). On completion, verify that
+   `results/<combo>/architecture_log.md` has a new row and
+   `results/<combo>/holdout_eval/iter<NNNN>_<commit>.json` exists. Do NOT
+   inspect or interpret the holdout numbers — they do not affect
+   keep/discard for this iteration or any future one. Then proceed to
+   iter `N+1`.
 
 ## Direction-switching and termination rules
 
