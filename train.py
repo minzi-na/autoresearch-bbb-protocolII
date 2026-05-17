@@ -167,7 +167,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         fp_idx  = [i for i, n in enumerate(self.mod_names) if n in _FP_MODS]
         emb_idx = [i for i, n in enumerate(self.mod_names) if n not in _FP_MODS]
         self.film = CrossModalFiLM(d_model, fp_idx, emb_idx)
-        self.post_film_norm = nn.LayerNorm(d_model)
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
@@ -183,7 +182,6 @@ class MultiModalGMLPFromFlat(nn.Module):
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = self.film(X)
-        X = self.post_film_norm(X)
         X = self.backbone(X)
         if self.use_gated_pool:
             scores = (X @ self.pool_queries.t()) / (X.size(-1) ** 0.5)
