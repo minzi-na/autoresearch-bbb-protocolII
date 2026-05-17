@@ -180,6 +180,8 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
+        if self.training:
+            X = X + torch.randn_like(X) * 0.01
         X = self.film(X)
         X = self.backbone(X)
         if self.use_gated_pool:
