@@ -215,7 +215,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
-    ema_decay = 0.91
+    ema_decay = 0.9
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     for epoch in range(num_epochs):
