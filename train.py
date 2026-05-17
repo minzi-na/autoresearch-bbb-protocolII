@@ -90,13 +90,14 @@ class SpatialGatingUnit(nn.Module):
 
 
 class gMLPBlock(nn.Module):
-    def __init__(self, d_model, d_ffn, seq_len, drop_path=0.025):
+    def __init__(self, d_model, d_ffn, seq_len, drop_path=0.025, mlp_drop=0.1):
         super().__init__()
         self.norm = nn.LayerNorm(d_model)
         self.channel_proj1 = nn.Linear(d_model, d_ffn * 2)
         self.channel_proj2 = nn.Linear(d_ffn, d_model)
         self.sgu = SpatialGatingUnit(d_ffn, seq_len)
         self.drop_path = drop_path
+        self.mlp_drop = nn.Dropout(mlp_drop)
 
     def forward(self, x):
         residual = x
@@ -106,6 +107,7 @@ class gMLPBlock(nn.Module):
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
+        x = self.mlp_drop(x)
         return x + residual
 
 
