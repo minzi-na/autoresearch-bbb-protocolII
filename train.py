@@ -157,17 +157,8 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
-        # iter26: multi-query attention pool (k=2) replaces input-independent
-        # gated pool. Safe-init: queries=0 → uniform softmax over seq_len →
-        # both heads pool the mean; pool_proj has identity-first-block so
-        # the initial output equals the mean (matches gated-pool init).
-        self.pool_n_queries = 2
-        self.pool_queries = nn.Parameter(torch.zeros(self.pool_n_queries, d_model))
-        self.pool_proj = nn.Linear(self.pool_n_queries * d_model, d_model)
-        with torch.no_grad():
-            nn.init.zeros_(self.pool_proj.weight)
-            nn.init.zeros_(self.pool_proj.bias)
-            self.pool_proj.weight[:, :d_model].copy_(torch.eye(d_model))
+        if use_gated_pool:
+            self.alpha = nn.Parameter(torch.zeros(self.seq_len))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         # iter6: per-sample modality token dropout (zero a whole modality
@@ -188,14 +179,11 @@ class MultiModalGMLPFromFlat(nn.Module):
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
-        # iter26: multi-query attention pool. scores = X @ queries^T scaled
-        # by sqrt(d_model); softmax over seq_len; weighted sum per query;
-        # concat and project back to d_model.
-        scores = X @ self.pool_queries.T
-        scores = scores / (X.size(-1) ** 0.5)
-        w = torch.softmax(scores, dim=1)  # (B, seq_len, k)
-        pooled = (w.unsqueeze(-1) * X.unsqueeze(2)).sum(dim=1)  # (B, k, d_model)
-        Xp = self.pool_proj(pooled.flatten(1))
+        if self.use_gated_pool:
+            w = torch.softmax(self.alpha, dim=0)
+            Xp = (X * w.view(1, -1, 1)).sum(dim=1)
+        else:
+            Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
