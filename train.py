@@ -355,7 +355,7 @@ def build_and_train(
             no_decay_params.append(p)
         else:
             decay_params.append(p)
-    optimizer = optim.AdamW(
+    optimizer = optim.NAdam(
         [
             {"params": decay_params, "weight_decay": BASE_CONFIG["weight_decay"]},
             {"params": no_decay_params, "weight_decay": 0.0},
