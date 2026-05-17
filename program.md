@@ -41,25 +41,44 @@ For each iteration `N`:
 
 1. Read `results/<combo>/results.tsv` last `keep=True` row to know current best.
    If empty, the next eval is the baseline reproduction (iter 1).
-2. Pick ONE architectural change and apply it to `train.py` via Edit.
-3. **Haiku 4.5 sanity check.** Spawn a Haiku 4.5 agent to review the diff for
+2. Pick ONE architectural change. **Consult `architecture_ideas.md`** if you
+   need direction — it contains the component-by-component improvement catalog
+   and a priority-ordered table.
+3. Apply via partial Edit on `train.py`.
+4. **Haiku 4.5 sanity check.** Spawn a Haiku 4.5 agent to review the diff for
    syntax + obvious logic errors. If flagged, fix before continuing.
-4. `git add train.py && git commit -m "iter<N>: <short>"`.
-5. Run evaluation IN BACKGROUND:
+5. `git add train.py && git commit -m "iter<N>: <short>"`.
+6. Run evaluation IN BACKGROUND:
    ```
    conda run -n rapids-25.02 python evaluate_combo.py \
      --combo <combo> --iter-id <N> --note "<short>"
    ```
    Use Bash with `run_in_background=true`. **Do NOT poll or stream output.**
    Wait for the completion notification, then read the appended TSV row.
-6. Inspect the new row's `keep` field:
+7. Inspect the new row's `keep` field:
    - `True`  → leave commit in place. Move on to iter `N+1`.
    - `False` → `git revert <commit>` (or `git reset --hard HEAD~1` if no other
      commits piggybacked on top). Do not delete the row in TSV — discarded
      attempts are part of the search log.
-7. (Optional, manual) When you believe a kept iteration is the current global
+8. (Optional, manual) When you believe a kept iteration is the current global
    best of the search, run `final_holdout_eval.py` once for the 5-subset
    breakdown. This is reporting only.
+
+## Direction-switching and termination rules
+
+- **3 consecutive discards in the same component direction → switch direction.**
+  Move to the next item in `architecture_ideas.md`'s priority table. Crashes
+  do not count toward this streak — fix the bug and retry.
+- **Crash handling.** If `evaluate_combo.py` exits non-zero or the appended
+  row is missing/empty, treat it as a crash. Inspect `tail -n 50` of the
+  background output file, fix the code, retry. If unfixable in 1–2 attempts,
+  revert the commit and move on.
+- **Per-run timeout: 60 minutes.** 10 seeds × ~5 min/seed is typical; if a run
+  exceeds 60 min, kill the background process and mark it as crash.
+- **After the priority table is exhausted**, synthesize variants/combinations
+  of previously kept changes. Do not re-try ideas already X-marked as failed
+  unless you have a meaningfully new variant.
+- **NEVER STOP** the loop on your own. Continue until the user interrupts.
 
 ## Hard rules
 
@@ -71,16 +90,13 @@ For each iteration `N`:
 - **One file, one diff.** Partial Edit on `train.py` only.
 - **Never commit `feature_cache_holdouts/` or `*.pth`.** They are gitignored.
 
-## Common architectural moves (non-exhaustive)
+## Where to look next
 
-These are the dimensions the agent should explore:
-
-1. **Per-modality projection** — pre-norm, scaling, residual projection, 2-layer projection.
-2. **gMLP backbone** — SGU variants (attention SGU, multi-axis SGU, gated SGU
-   cascade), normalization location, FFN variants, dropout/stoch-depth schedules.
-3. **Pooling** — gated pool tuning, attention pool, learnable skip mix.
-4. **Stability** — residual scaling, layer init, label smoothing, optimizer
-   tweaks INSIDE `train_model` (but `BASE_CONFIG` lr/wd/bs frozen).
+For concrete architecture ideas, priority order, code snippets, and
+combo-specific notes, read **`architecture_ideas.md`**. It groups proposals
+into six components (Projection / SGU / Pooling / Training dynamics /
+Cross-modal FiLM / Regularization) and provides a 1-N priority table.
 
 Reuse insight from past BBB autoresearch runs but verify against the current
-results.tsv — every architecture must re-prove itself on this combo's val_auc.
+combo's results.tsv — every architecture must re-prove itself on this combo's
+val_auc.
