@@ -74,33 +74,36 @@ def set_seed(seed: int):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class SpatialGatingUnit(nn.Module):
-    # iter12: multi-head SGU — split the d_ffn hidden dim into n_heads
-    # disjoint groups, each with its own seq_len×seq_len spatial mixer.
-    # d_ffn=1048 is divisible by 2 (524) and 4 (262); 2 is the conservative
-    # choice given seq_len=4 (per-head mixer is still small).
-    SGU_N_HEADS = 2
-
+    # iter16: diagonal-masked attention SGU — replace the static per-head
+    # Conv1d mixer with content-dependent attention over the seq_len modality
+    # tokens. The diagonal of the attention matrix is masked to -inf so a
+    # token cannot attend to itself, forcing genuine cross-modal mixing.
+    # Wv is identity-initialized so V ≈ v at init (similar magnitude to
+    # original SGU's v path).
     def __init__(self, d_ffn, seq_len):
         super().__init__()
-        assert d_ffn % self.SGU_N_HEADS == 0, \
-            f"d_ffn={d_ffn} not divisible by n_heads={self.SGU_N_HEADS}"
         self.norm = nn.LayerNorm(d_ffn)
-        self.spatial_proj = nn.ModuleList([
-            nn.Conv1d(seq_len, seq_len, kernel_size=1)
-            for _ in range(self.SGU_N_HEADS)
-        ])
-        for proj in self.spatial_proj:
-            nn.init.constant_(proj.bias, 1.0)
+        self.Wq = nn.Linear(d_ffn, d_ffn)
+        self.Wk = nn.Linear(d_ffn, d_ffn)
+        self.Wv = nn.Linear(d_ffn, d_ffn)
+        nn.init.eye_(self.Wv.weight)
+        nn.init.zeros_(self.Wv.bias)
+        diag_mask = torch.zeros(seq_len, seq_len)
+        diag_mask.fill_diagonal_(float("-inf"))
+        self.register_buffer("diag_mask", diag_mask)
+        self.scale = float(d_ffn) ** -0.5
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v = self.norm(v)
-        v_chunks = v.chunk(self.SGU_N_HEADS, dim=-1)
-        v_out = torch.cat(
-            [proj(vc) for proj, vc in zip(self.spatial_proj, v_chunks)],
-            dim=-1,
-        )
-        return u * v_out
+        Q = self.Wq(v)
+        K = self.Wk(v)
+        V = self.Wv(v)
+        attn_logits = (Q @ K.transpose(-1, -2)) * self.scale
+        attn_logits = attn_logits + self.diag_mask
+        attn = torch.softmax(attn_logits, dim=-1)
+        out = attn @ V
+        return u * out
 
 
 class gMLPBlock(nn.Module):
