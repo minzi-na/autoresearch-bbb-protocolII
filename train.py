@@ -74,17 +74,33 @@ def set_seed(seed: int):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class SpatialGatingUnit(nn.Module):
+    # iter12: multi-head SGU — split the d_ffn hidden dim into n_heads
+    # disjoint groups, each with its own seq_len×seq_len spatial mixer.
+    # d_ffn=1048 is divisible by 2 (524) and 4 (262); 2 is the conservative
+    # choice given seq_len=4 (per-head mixer is still small).
+    SGU_N_HEADS = 2
+
     def __init__(self, d_ffn, seq_len):
         super().__init__()
+        assert d_ffn % self.SGU_N_HEADS == 0, \
+            f"d_ffn={d_ffn} not divisible by n_heads={self.SGU_N_HEADS}"
         self.norm = nn.LayerNorm(d_ffn)
-        self.spatial_proj = nn.Conv1d(seq_len, seq_len, kernel_size=1)
-        nn.init.constant_(self.spatial_proj.bias, 1.0)
+        self.spatial_proj = nn.ModuleList([
+            nn.Conv1d(seq_len, seq_len, kernel_size=1)
+            for _ in range(self.SGU_N_HEADS)
+        ])
+        for proj in self.spatial_proj:
+            nn.init.constant_(proj.bias, 1.0)
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v = self.norm(v)
-        v = self.spatial_proj(v)
-        return u * v
+        v_chunks = v.chunk(self.SGU_N_HEADS, dim=-1)
+        v_out = torch.cat(
+            [proj(vc) for proj, vc in zip(self.spatial_proj, v_chunks)],
+            dim=-1,
+        )
+        return u * v_out
 
 
 class gMLPBlock(nn.Module):
