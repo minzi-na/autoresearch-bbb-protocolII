@@ -159,6 +159,14 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
+        # iter59: hybrid pool — augment static alpha with a per-sample
+        # content-derived score. Init score-proj weight=0, bias=0 → at start
+        # the per-sample score is 0 and pool reduces to pure-alpha softmax
+        # (same as current). Lets the model add content-dependent reweighting
+        # if it helps.
+        self.pool_score_proj = nn.Linear(d_model, 1)
+        nn.init.zeros_(self.pool_score_proj.weight)
+        nn.init.zeros_(self.pool_score_proj.bias)
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         # iter6: per-sample modality token dropout (zero a whole modality
@@ -178,9 +186,12 @@ class MultiModalGMLPFromFlat(nn.Module):
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
+        # iter59: hybrid pool — softmax over (alpha + per-sample content score).
         if self.use_gated_pool:
-            w = torch.softmax(self.alpha, dim=0)
-            Xp = (X * w.view(1, -1, 1)).sum(dim=1)
+            content_score = self.pool_score_proj(X).squeeze(-1)  # (B, seq_len)
+            logits = self.alpha.unsqueeze(0) + content_score
+            w = torch.softmax(logits, dim=1)  # (B, seq_len)
+            Xp = (X * w.unsqueeze(-1)).sum(dim=1)
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
