@@ -115,11 +115,13 @@ def run_one_seed(combo_tuple, X_pool, y_pool, smiles, split_mode, seed, fp_dim):
     gc.collect()
 
     return {
-        "seed":       seed,
-        "val_auc":    val_metrics["roc_auc"],
-        "val_mcc":    val_metrics["mcc"],
-        "val_loss":   val_loss_at_best,
-        "best_epoch": best_epoch,
+        "seed":         seed,
+        "val_auc":      val_metrics["roc_auc"],
+        "val_mcc":      val_metrics["mcc"],
+        "val_loss":     val_loss_at_best,
+        "best_epoch":   best_epoch,
+        "n_epochs_run": train_info.get("n_epochs_run", len(epoch_log)),
+        "epoch_log":    epoch_log,
     }
 
 
