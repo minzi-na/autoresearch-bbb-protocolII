@@ -210,8 +210,9 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # get polluted by the very early, rapidly-shifting weights.
     # iter32: sweep EMA decay 0.999 -> 0.9995 (slower) on warmup-equipped stack.
     # iter19 tried 0.9995 (failed) but on a stack without iter22/iter27/iter30
-    # improvements, so the optimum may have shifted.
-    ema_decay = 0.9995
+    # improvements, so the optimum has shifted toward slower decay.
+    # iter33: continue the sweep — 0.9995 -> 0.9997.
+    ema_decay = 0.9997
     # iter30: sweep warmup further down to 1 epoch.
     ema_warmup_epochs = 1
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
