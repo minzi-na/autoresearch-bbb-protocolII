@@ -138,8 +138,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
-            self.pool_queries = nn.Parameter(torch.zeros(2, d_model))
-            self.pool_attn_proj = nn.Linear(2 * d_model, d_model)
+            self.pool_query = nn.Parameter(torch.zeros(d_model))
             self.pool_logits = nn.Parameter(torch.zeros(4))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
@@ -160,10 +159,9 @@ class MultiModalGMLPFromFlat(nn.Module):
             gated = (X * w.view(1, -1, 1)).sum(dim=1)
             mean = X.mean(dim=1)
             max_pool = X.max(dim=1).values
-            attn_scores = torch.einsum('bsd,kd->bsk', X, self.pool_queries) / (X.shape[-1] ** 0.5)
+            attn_scores = (X @ self.pool_query) / (X.shape[-1] ** 0.5)
             attn_w = torch.softmax(attn_scores, dim=1)
-            attn_pooled = torch.einsum('bsk,bsd->bkd', attn_w, X)
-            attn_pool = self.pool_attn_proj(attn_pooled.flatten(1))
+            attn_pool = (X * attn_w.unsqueeze(-1)).sum(dim=1)
             pw = torch.softmax(self.pool_logits, dim=0)
             Xp = pw[0] * gated + pw[1] * mean + pw[2] * max_pool + pw[3] * attn_pool
         else:
