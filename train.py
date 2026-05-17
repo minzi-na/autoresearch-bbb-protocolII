@@ -90,7 +90,7 @@ class SpatialGatingUnit(nn.Module):
 
 
 class gMLPBlock(nn.Module):
-    def __init__(self, d_model, d_ffn, seq_len, drop_path=0.025):
+    def __init__(self, d_model, d_ffn, seq_len, drop_path=0.035):
         super().__init__()
         self.norm = nn.LayerNorm(d_model)
         self.channel_proj1 = nn.Linear(d_model, d_ffn * 2)
