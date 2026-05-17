@@ -127,11 +127,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.use_gated_pool = use_gated_pool
 
         self.proj = nn.ModuleDict({
-            name: nn.Sequential(
-                nn.Linear(in_dim, d_model),
-                nn.GELU(),
-                nn.Linear(d_model, d_model),
-            )
+            name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
