@@ -208,44 +208,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     lr = optimizer.param_groups[0]["lr"]
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 
-    # iter46: wrap AdamW in Lookahead. Maintains a slow snapshot of weights;
-    # every k optimizer steps, pulls the fast weights alpha-way toward the
-    # slow snapshot (and updates the snapshot). Different from EMA-for-val
-    # (which only snapshots for ES) — Lookahead actually modifies the
-    # training trajectory.
-    class _Lookahead:
-        def __init__(self, opt, k=5, alpha=0.5):
-            self.opt = opt
-            self.k = k
-            self.alpha = alpha
-            self.steps = 0
-            self.slow = []
-            for group in opt.param_groups:
-                for p in group["params"]:
-                    self.slow.append(p.data.clone())
-
-        @property
-        def param_groups(self):
-            return self.opt.param_groups
-
-        def zero_grad(self):
-            self.opt.zero_grad()
-
-        def step(self):
-            self.opt.step()
-            self.steps += 1
-            if self.steps % self.k == 0:
-                idx = 0
-                for group in self.opt.param_groups:
-                    for p in group["params"]:
-                        with torch.no_grad():
-                            slow = self.slow[idx]
-                            slow.add_(self.alpha * (p.data - slow))
-                            p.data.copy_(slow)
-                        idx += 1
-
-    optimizer = _Lookahead(optimizer, k=5, alpha=0.5)
-
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
     # iter27: warmup the EMA — during the first ema_warmup_epochs epochs,
