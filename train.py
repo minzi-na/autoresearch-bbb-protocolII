@@ -104,11 +104,6 @@ class SpatialGatingUnit(nn.Module):
 
 
 class gMLPBlock(nn.Module):
-    # iter15: stochastic depth — drop the whole block (return residual) with
-    # probability drop_path during training. depth=4 caps the regularization
-    # strength; 0.10 is the middle of the suggested 0.05–0.10 range.
-    DROP_PATH = 0.10
-
     def __init__(self, d_model, d_ffn, seq_len):
         super().__init__()
         self.norm = nn.LayerNorm(d_model)
@@ -118,9 +113,6 @@ class gMLPBlock(nn.Module):
 
     def forward(self, x):
         residual = x
-        if self.training and self.DROP_PATH > 0 and \
-                torch.rand(1).item() < self.DROP_PATH:
-            return residual
         x = self.norm(x)
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
