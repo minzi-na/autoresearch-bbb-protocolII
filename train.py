@@ -152,6 +152,14 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
+        # iter50: per-modality LayerNorm after projection. Normalizes each
+        # modality token's mean/std so 0/1 bit modalities (MACCS/Avalon) and
+        # pretrained embeddings (Scage2/Mole) live on the same scale before
+        # the backbone. iter5 had failed on the much earlier baseline stack;
+        # retry now that AdamW + proj_scale + DropPath + EMA are in place.
+        self.proj_norm = nn.ModuleDict({
+            n: nn.LayerNorm(d_model) for n in self.mod_names
+        })
         # iter20: per-modality learnable scale (init=1.0, identity at start)
         self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
@@ -168,7 +176,7 @@ class MultiModalGMLPFromFlat(nn.Module):
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
-        tokens = [self.proj[name](chunk)
+        tokens = [self.proj_norm[name](self.proj[name](chunk))
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = X * self.proj_scale.view(1, self.seq_len, 1)
