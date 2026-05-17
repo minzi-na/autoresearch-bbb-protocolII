@@ -302,11 +302,11 @@ together to save an iteration.
 
 ## Combo-specific notes
 
-| Combo | seq_len | fp / embed | Likely-strongest moves |
-|-------|---------|------------|------------------------|
-| combo1 `maccs+avalon+scage2+mole`      | 4 | 2 fp + 2 embed | balanced — try **#5, #8, #9** early |
-| combo2 `maccs+scage1+mole`             | 3 | 1 fp + 2 embed | smallest seq, embedding-heavy — **#3, #5, #16** (diag-mask) |
-| combo3 `maccs+scage1+scage2+mole`      | 4 | 1 fp + 3 embed | most embedding-heavy — **#6 modality dropout, #8 FiLM** |
+| Combo | seq_len | fp / embed |
+|-------|---------|------------|
+| combo1 `maccs+avalon+scage2+mole`      | 4 | 2 fp + 2 embed |
+| combo2 `maccs+scage1+mole`             | 3 | 1 fp + 2 embed |
+| combo3 `maccs+scage1+scage2+mole`      | 4 | 1 fp + 3 embed |
 
 `scage2` is the new modality that did not appear in the prior BBB
 autoresearch combos. Treat it as a second pretrained embedding analogous
