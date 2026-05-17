@@ -164,15 +164,15 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
-        # CLS token prepended at index 0; modality tokens follow at indices 1..N
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
-        nn.init.normal_(self.cls_token, std=0.02)
-        fp_idx  = [i + 1 for i, n in enumerate(self.mod_names) if n in _FP_MODS]
-        emb_idx = [i + 1 for i, n in enumerate(self.mod_names) if n not in _FP_MODS]
+        fp_idx  = [i for i, n in enumerate(self.mod_names) if n in _FP_MODS]
+        emb_idx = [i for i, n in enumerate(self.mod_names) if n not in _FP_MODS]
         self.film = CrossModalFiLM(d_model, fp_idx, emb_idx)
-        self.backbone = gMLP(seq_len=self.seq_len + 1, d_model=d_model,
+        self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
+        if use_gated_pool:
+            self.pool_query = nn.Parameter(torch.zeros(d_model))
+            self.skip_gate = nn.Parameter(torch.zeros(1))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
 
@@ -181,11 +181,17 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
-        cls = self.cls_token.expand(X.size(0), -1, -1)
-        X = torch.cat([cls, X], dim=1)
         X = self.film(X)
         X = self.backbone(X)
-        Xp = X[:, 0, :]
+        if self.use_gated_pool:
+            scores = (X @ self.pool_query) / (X.size(-1) ** 0.5)
+            w = torch.softmax(scores, dim=1)
+            gated = (w.unsqueeze(-1) * X).sum(dim=1)
+            mean = X.mean(dim=1)
+            g = torch.sigmoid(self.skip_gate)
+            Xp = g * gated + (1.0 - g) * mean
+        else:
+            Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
