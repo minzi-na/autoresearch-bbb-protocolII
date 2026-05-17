@@ -148,6 +148,12 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.seq_len   = len(self.mod_names)
         self.use_gated_pool = use_gated_pool
 
+        # iter55: BatchNorm1d on the raw flat input — running mean/std over
+        # the training set normalize the heterogeneous modality scales (bits
+        # vs. pretrained embeddings) before per-modality projection. Distinct
+        # from iter5/iter50 per-modality LayerNorm (per-sample) — BN uses
+        # dataset-level statistics.
+        self.input_bn = nn.BatchNorm1d(sum(self.mod_dims))
         self.proj = nn.ModuleDict({
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
@@ -167,6 +173,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.mod_drop_p = 0.15
 
     def forward(self, x):
+        x = self.input_bn(x)
         chunks = torch.split(x, self.mod_dims, dim=1)
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
