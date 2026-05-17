@@ -74,7 +74,7 @@ def set_seed(seed: int):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class SpatialGatingUnit(nn.Module):
-    def __init__(self, d_ffn, seq_len, n_heads=2):
+    def __init__(self, d_ffn, seq_len, n_heads=8):
         super().__init__()
         assert d_ffn % n_heads == 0
         self.n_heads = n_heads
