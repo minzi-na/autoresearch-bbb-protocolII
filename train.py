@@ -347,10 +347,20 @@ def build_and_train(
         use_gated_pool=BASE_CONFIG["use_gated_pool"],
     ).to(device)
 
+    decay_params, no_decay_params = [], []
+    for name, p in model.named_parameters():
+        if not p.requires_grad:
+            continue
+        if p.ndim <= 1 or name.endswith(".bias") or "norm" in name.lower():
+            no_decay_params.append(p)
+        else:
+            decay_params.append(p)
     optimizer = optim.AdamW(
-        model.parameters(),
+        [
+            {"params": decay_params, "weight_decay": BASE_CONFIG["weight_decay"]},
+            {"params": no_decay_params, "weight_decay": 0.0},
+        ],
         lr=BASE_CONFIG["lr"],
-        weight_decay=BASE_CONFIG["weight_decay"],
     )
     loss_fn = nn.BCEWithLogitsLoss()
 
