@@ -226,7 +226,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            y_smooth = y * (1.0 - 0.05) + 0.05 * 0.5
+            loss = loss_fn(model(x), y_smooth)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
