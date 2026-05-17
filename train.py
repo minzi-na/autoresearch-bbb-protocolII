@@ -193,6 +193,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
+            mix_alpha = 0.2
+            lam = float(np.random.beta(mix_alpha, mix_alpha))
+            perm = torch.randperm(x.shape[0], device=device)
+            x = lam * x + (1 - lam) * x[perm]
+            y = lam * y + (1 - lam) * y[perm]
             optimizer.zero_grad()
             loss = loss_fn(model(x), y)
             loss.backward()
