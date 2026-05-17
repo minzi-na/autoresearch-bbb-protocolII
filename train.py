@@ -159,14 +159,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
-        # iter44: 2-layer MLP head (Linear -> GELU -> Linear). Adds expressive
-        # power between pool output and logits; AdamW wd=0.01 + dropout
-        # provide regularization to control the extra capacity.
-        self.head = nn.Sequential(
-            nn.Linear(d_model, d_model // 2),
-            nn.GELU(),
-            nn.Linear(d_model // 2, 1),
-        )
+        self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         # iter6: per-sample modality token dropout (zero a whole modality
         # token with prob p) — encourages cross-modal redundancy / prevents
