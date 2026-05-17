@@ -15,7 +15,6 @@ Do NOT edit:
   - device handling
 """
 
-import math
 import random
 from copy import deepcopy
 from collections import OrderedDict
@@ -167,19 +166,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     else:
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
-    # iter2: AdamW + grad-clip(1.0) + warmup(5) + cosine LR schedule.
-    # Reuse lr/weight_decay from the passed optimizer (BASE_CONFIG stays frozen).
-    lr = optimizer.param_groups[0]["lr"]
-    weight_decay = optimizer.param_groups[0]["weight_decay"]
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    warmup_epochs = 5
-    def lr_lambda(epoch):
-        if epoch < warmup_epochs:
-            return (epoch + 1) / warmup_epochs
-        p = (epoch - warmup_epochs) / max(1, num_epochs - warmup_epochs)
-        return 0.5 * (1 + math.cos(math.pi * p)) * 0.99 + 0.01
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-
     best_state = None
     best_epoch = -1
     bad = 0
@@ -193,7 +179,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             optimizer.zero_grad()
             loss = loss_fn(model(x), y)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             tr_loss_sum += loss.item()
             tr_batches  += 1
@@ -224,8 +209,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             "val_auc":    round(val_auc, 6),
             "val_mcc":    round(val_mcc, 6),
         })
-
-        scheduler.step()
 
         score = val_auc if es_metric == "val_auc" else val_loss
         if is_better(score, best_score):
