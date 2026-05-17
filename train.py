@@ -164,7 +164,6 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
-        self.mod_drop_p = 0.05
         fp_idx  = [i for i, n in enumerate(self.mod_names) if n in _FP_MODS]
         emb_idx = [i for i, n in enumerate(self.mod_names) if n not in _FP_MODS]
         self.film = CrossModalFiLM(d_model, fp_idx, emb_idx)
@@ -182,9 +181,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
-        if self.training and self.mod_drop_p > 0:
-            mask = (torch.rand(X.size(0), X.size(1), device=X.device) > self.mod_drop_p).float()
-            X = X * mask.unsqueeze(-1)
         X = self.film(X)
         X = self.backbone(X)
         if self.use_gated_pool:
