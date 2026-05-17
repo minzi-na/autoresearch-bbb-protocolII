@@ -166,14 +166,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     else:
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
-    # iter3: rebuild loss_fn with pos_weight = n_neg / n_pos from train labels
-    # to counter class imbalance (BBB+ : BBB- ~ 2.27 : 1 on this pool).
-    _y_train = train_loader.dataset.tensors[1]
-    n_pos = (_y_train == 1).float().sum()
-    n_neg = (_y_train == 0).float().sum()
-    pos_weight = (n_neg / torch.clamp(n_pos, min=1.0)).to(device)
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-
     best_state = None
     best_epoch = -1
     bad = 0
