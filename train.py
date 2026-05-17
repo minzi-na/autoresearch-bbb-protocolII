@@ -188,9 +188,9 @@ class MultiModalGMLPFromFlat(nn.Module):
             w = torch.softmax(scores, dim=1)
             pooled = torch.einsum("bsk,bsd->bkd", w, X)
             gated = pooled.mean(dim=1)
-            mean = X.mean(dim=1)
+            mx = X.max(dim=1).values
             g = torch.sigmoid(self.skip_gate)
-            Xp = g * gated + (1.0 - g) * mean
+            Xp = g * gated + (1.0 - g) * mx
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
