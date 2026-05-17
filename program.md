@@ -57,9 +57,11 @@ For each iteration `N`:
    Wait for the completion notification, then read the appended TSV row.
 7. Inspect the new row's `keep` field:
    - `True`  → leave commit in place. Move on to iter `N+1`.
-   - `False` → `git revert <commit>` (or `git reset --hard HEAD~1` if no other
-     commits piggybacked on top). Do not delete the row in TSV — discarded
-     attempts are part of the search log.
+   - `False` → **`git revert <commit>` only.** Do NOT use `git reset --hard`.
+     The discarded commit must remain in history so that `git show <commit>`
+     resolves the TSV row's commit hash months later for analysis or to spawn
+     a variant of a failed attempt. The TSV row itself stays as well —
+     discarded attempts are part of the search log.
 8. (Optional, manual) When you believe a kept iteration is the current global
    best of the search, run `final_holdout_eval.py` once for the 5-subset
    breakdown. This is reporting only.
