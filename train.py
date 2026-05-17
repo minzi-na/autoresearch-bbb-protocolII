@@ -138,7 +138,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
-            self.skip_gate = nn.Parameter(torch.zeros(1))
+            self.skip_gate = nn.Parameter(torch.full((1,), 0.85))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         self.mod_drop_p = 0.075
