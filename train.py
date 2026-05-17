@@ -202,6 +202,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     else:
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
+    # iter53: extend ES patience 10 -> 15 inside train_model. BASE_CONFIG
+    # stays untouched; this is a local shadow only. Lets training tolerate
+    # longer plateaus before stopping.
+    patience = 15
+
     # iter38: replace the passed-in Adam (wd=1e-5 ~ effectively 0) with AdamW
     # using decoupled wd=0.01 — a real weight-decay regularizer to complement
     # EMA / DropPath / mod_drop, with the same lr as before.
