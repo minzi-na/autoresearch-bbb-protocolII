@@ -225,7 +225,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             optimizer.zero_grad()
             loss = loss_fn(model(x), y)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             tr_loss_sum += loss.item()
             tr_batches  += 1
