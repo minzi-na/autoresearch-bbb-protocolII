@@ -181,8 +181,8 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
-        X = self.film(X)
         X = self.backbone(X)
+        X = self.film(X)
         if self.use_gated_pool:
             scores = (X @ self.pool_queries.t()) / (X.size(-1) ** 0.5)
             w = torch.softmax(scores, dim=1)
