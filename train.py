@@ -74,16 +74,22 @@ def set_seed(seed: int):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class SpatialGatingUnit(nn.Module):
-    def __init__(self, d_ffn, seq_len):
+    def __init__(self, d_ffn, seq_len, n_heads=2):
         super().__init__()
+        assert d_ffn % n_heads == 0
+        self.n_heads = n_heads
         self.norm = nn.LayerNorm(d_ffn)
-        self.spatial_proj = nn.Conv1d(seq_len, seq_len, kernel_size=1)
-        nn.init.constant_(self.spatial_proj.bias, 1.0)
+        self.spatial_projs = nn.ModuleList([
+            nn.Conv1d(seq_len, seq_len, kernel_size=1) for _ in range(n_heads)
+        ])
+        for proj in self.spatial_projs:
+            nn.init.constant_(proj.bias, 1.0)
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v = self.norm(v)
-        v = self.spatial_proj(v)
+        v_chunks = v.chunk(self.n_heads, dim=-1)
+        v = torch.cat([proj(c) for proj, c in zip(self.spatial_projs, v_chunks)], dim=-1)
         return u * v
 
 
