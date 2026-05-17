@@ -204,7 +204,12 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
+    # iter27: warmup the EMA — during the first ema_warmup_epochs epochs,
+    # ema_state tracks the online state exactly (no smoothing). After warmup,
+    # exponential averaging at decay=0.999 begins so the snapshot does not
+    # get polluted by the very early, rapidly-shifting weights.
     ema_decay = 0.999
+    ema_warmup_epochs = 3
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     best_state = None
@@ -223,8 +228,9 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             optimizer.step()
             with torch.no_grad():
                 msd = model.state_dict()
+                in_warmup = epoch < ema_warmup_epochs
                 for k in ema_state:
-                    if msd[k].dtype.is_floating_point:
+                    if msd[k].dtype.is_floating_point and not in_warmup:
                         ema_state[k].mul_(ema_decay).add_(
                             msd[k].detach(), alpha=1.0 - ema_decay)
                     else:
