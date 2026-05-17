@@ -208,16 +208,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     lr = optimizer.param_groups[0]["lr"]
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 
-    # iter41: linear lr warmup for first 3 epochs (lr ramps from lr/3 to lr,
-    # then stays at lr). Standalone warmup, no cosine decay tail — iter 2 had
-    # warmup bundled with cosine + clip and failed, so untangle warmup alone.
-    lr_warmup_epochs = 3
-    def _lr_lambda(epoch):
-        if epoch < lr_warmup_epochs:
-            return (epoch + 1) / lr_warmup_epochs
-        return 1.0
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, _lr_lambda)
-
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
     # iter27: warmup the EMA — during the first ema_warmup_epochs epochs,
@@ -299,9 +289,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             bad += 1
             if bad >= patience:
                 break
-
-        # iter41: step the linear lr warmup scheduler at end of each epoch.
-        scheduler.step()
 
     if best_state is not None:
         model.load_state_dict(best_state)
