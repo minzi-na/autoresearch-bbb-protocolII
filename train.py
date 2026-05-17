@@ -73,20 +73,6 @@ def set_seed(seed: int):
 #  EDITABLE — model definition
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class _RMSNorm(nn.Module):
-    # iter42: simple RMSNorm replacement for SGU's pre-mix LayerNorm.
-    # No mean centering; only RMS rescaling, with a learnable per-channel
-    # gain (init=1.0). Modern variant common in transformer literature.
-    def __init__(self, dim, eps=1e-6):
-        super().__init__()
-        self.eps = eps
-        self.weight = nn.Parameter(torch.ones(dim))
-
-    def forward(self, x):
-        rms = x.pow(2).mean(dim=-1, keepdim=True).add(self.eps).sqrt()
-        return self.weight * (x / rms)
-
-
 class SpatialGatingUnit(nn.Module):
     # iter12: multi-head SGU — split the d_ffn hidden dim into n_heads
     # disjoint groups, each with its own seq_len×seq_len spatial mixer.
@@ -102,8 +88,7 @@ class SpatialGatingUnit(nn.Module):
         super().__init__()
         assert d_ffn % self.SGU_N_HEADS == 0, \
             f"d_ffn={d_ffn} not divisible by n_heads={self.SGU_N_HEADS}"
-        # iter42: swap SGU's pre-mix LayerNorm for RMSNorm.
-        self.norm = _RMSNorm(d_ffn)
+        self.norm = nn.LayerNorm(d_ffn)
         self.spatial_proj = nn.ModuleList([
             nn.Conv1d(seq_len, seq_len, kernel_size=1)
             for _ in range(self.SGU_N_HEADS)
