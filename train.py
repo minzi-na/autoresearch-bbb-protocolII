@@ -172,6 +172,11 @@ class MultiModalGMLPFromFlat(nn.Module):
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = X * self.proj_scale.view(1, self.seq_len, 1)
+        # iter57: small Gaussian noise on projected tokens (train-only). A
+        # continuous-perturbation regularizer, complementing the discrete
+        # mod_drop / DropPath / head dropout.
+        if self.training:
+            X = X + torch.randn_like(X) * 0.01
         if self.training and self.mod_drop_p > 0:
             B = X.size(0)
             mask = (torch.rand(B, self.seq_len, device=X.device)
