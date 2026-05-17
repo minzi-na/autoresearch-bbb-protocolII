@@ -110,11 +110,10 @@ class gMLPBlock(nn.Module):
 
 
 class gMLP(nn.Module):
-    def __init__(self, d_model=256, d_ffn=512, seq_len=256, num_layers=6, max_drop_path=0.025):
+    def __init__(self, d_model=256, d_ffn=512, seq_len=256, num_layers=6):
         super().__init__()
-        dp_rates = [max_drop_path * i / max(1, num_layers - 1) for i in range(num_layers)]
         self.model = nn.Sequential(
-            *[gMLPBlock(d_model, d_ffn, seq_len, drop_path=dp_rates[i]) for i in range(num_layers)]
+            *[gMLPBlock(d_model, d_ffn, seq_len) for _ in range(num_layers)]
         )
 
     def forward(self, x):
