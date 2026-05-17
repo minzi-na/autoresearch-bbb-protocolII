@@ -93,16 +93,8 @@ class SpatialGatingUnit(nn.Module):
             nn.Conv1d(seq_len, seq_len, kernel_size=1)
             for _ in range(self.SGU_N_HEADS)
         ])
-        # iter52: identity-init spatial_proj weights (eye) and zero bias,
-        # so at init v_mixed = v exactly and SGU output = u * v (the design
-        # intent of multiplicative gating). Previously bias=1 + random small
-        # weights made the SGU start close to "u only".
-        with torch.no_grad():
-            for proj in self.spatial_proj:
-                proj.weight.zero_()
-                for k in range(seq_len):
-                    proj.weight[k, k, 0] = 1.0
-                proj.bias.zero_()
+        for proj in self.spatial_proj:
+            nn.init.constant_(proj.bias, 1.0)
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
