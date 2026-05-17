@@ -79,11 +79,17 @@ class SpatialGatingUnit(nn.Module):
         self.norm = nn.LayerNorm(d_ffn)
         self.spatial_proj = nn.Conv1d(seq_len, seq_len, kernel_size=1)
         nn.init.constant_(self.spatial_proj.bias, 1.0)
+        # iter10: learnable residual scale on the spatial path. At init
+        # gate_scale=0 ⇒ exp(0)=1 ⇒ v_mixed = spatial_proj(v) (identity to
+        # original SGU). Model can learn to blend raw v back in.
+        self.gate_scale = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v = self.norm(v)
-        v = self.spatial_proj(v)
+        s = self.gate_scale.exp()
+        v_proj = self.spatial_proj(v)
+        v = s * v_proj + (1.0 - s) * v
         return u * v
 
 
