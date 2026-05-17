@@ -132,7 +132,11 @@ class MultiModalGMLPFromFlat(nn.Module):
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
-            self.alpha = nn.Parameter(torch.zeros(self.seq_len))
+            # iter9: replace input-independent softmax(alpha) weights with
+            # input-dependent attention pooling. Init zero ⇒ scores=0 ⇒
+            # softmax uniform = mean pool. Safe-init.
+            self.pool_query = nn.Parameter(torch.zeros(d_model))
+            self._pool_scale = float(d_model) ** 0.5
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         # iter6: per-sample modality token dropout (zero a whole modality
@@ -152,8 +156,9 @@ class MultiModalGMLPFromFlat(nn.Module):
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         if self.use_gated_pool:
-            w = torch.softmax(self.alpha, dim=0)
-            Xp = (X * w.view(1, -1, 1)).sum(dim=1)
+            scores = (X @ self.pool_query) / self._pool_scale   # (B, seq_len)
+            w = torch.softmax(scores, dim=1)
+            Xp = (w.unsqueeze(-1) * X).sum(dim=1)
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
