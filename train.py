@@ -208,13 +208,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     lr = optimizer.param_groups[0]["lr"]
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 
-    # iter54: cosine annealing schedule (no warmup, no clip). iter53 logs
-    # showed best_epoch=46/50 with val_auc still climbing — the model wants
-    # finer steps late in training. T_max = num_epochs; eta_min = lr * 0.01.
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=num_epochs, eta_min=lr * 0.01,
-    )
-
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
     # iter27: warmup the EMA — during the first ema_warmup_epochs epochs,
@@ -296,9 +289,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             bad += 1
             if bad >= patience:
                 break
-
-        # iter54: step the cosine scheduler at end of each epoch.
-        scheduler.step()
 
     if best_state is not None:
         model.load_state_dict(best_state)
