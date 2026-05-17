@@ -118,6 +118,10 @@ class gMLPBlock(nn.Module):
         self.channel_proj1 = nn.Linear(d_model, d_ffn * 2)
         self.channel_proj2 = nn.Linear(d_ffn, d_model)
         self.sgu = SpatialGatingUnit(d_ffn, seq_len)
+        # iter60: per-element dropout on the block update (after channel_proj2,
+        # before residual add). Distinct from SGU DropPath (per-sample binary
+        # on v_mixed) and mod_drop (per-sample binary on whole modality token).
+        self.block_drop = nn.Dropout(0.10)
 
     def forward(self, x):
         residual = x
@@ -125,6 +129,7 @@ class gMLPBlock(nn.Module):
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
+        x = self.block_drop(x)
         return x + residual
 
 
