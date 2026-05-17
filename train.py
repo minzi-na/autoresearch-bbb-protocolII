@@ -208,7 +208,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # ema_state tracks the online state exactly (no smoothing). After warmup,
     # exponential averaging at decay=0.999 begins so the snapshot does not
     # get polluted by the very early, rapidly-shifting weights.
-    ema_decay = 0.999
+    # iter31: sweep EMA decay down 0.999 -> 0.997 (faster tracking).
+    ema_decay = 0.997
     # iter30: sweep warmup further down to 1 epoch.
     ema_warmup_epochs = 1
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
