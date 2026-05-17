@@ -154,22 +154,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         })
         # iter20: per-modality learnable scale (init=1.0, identity at start)
         self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
-        # iter49: cross-modal FiLM — fp tokens (maccs/avalon) and embed tokens
-        # (scage1/scage2/mole) condition each other via (gamma, beta) generated
-        # from the mean of the *other* category. Safe-init: both Linear weights
-        # and biases set to zero → gamma=0, beta=0 → FiLM is identity at start.
-        fp_names = {"maccs", "avalon"}
-        emb_names = {"scage1", "scage2", "mole"}
-        self.film_fp_idx = [i for i, n in enumerate(self.mod_names) if n in fp_names]
-        self.film_emb_idx = [i for i, n in enumerate(self.mod_names) if n in emb_names]
-        self.use_film = len(self.film_fp_idx) > 0 and len(self.film_emb_idx) > 0
-        if self.use_film:
-            self.film_embed_to_fp = nn.Linear(d_model, d_model * 2)
-            self.film_fp_to_embed = nn.Linear(d_model, d_model * 2)
-            nn.init.zeros_(self.film_embed_to_fp.weight)
-            nn.init.zeros_(self.film_embed_to_fp.bias)
-            nn.init.zeros_(self.film_fp_to_embed.weight)
-            nn.init.zeros_(self.film_fp_to_embed.bias)
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
@@ -188,19 +172,6 @@ class MultiModalGMLPFromFlat(nn.Module):
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = X * self.proj_scale.view(1, self.seq_len, 1)
-        # iter49: cross-modal FiLM applied before mod_drop.
-        if self.use_film:
-            fp_mean = X[:, self.film_fp_idx, :].mean(dim=1)
-            emb_mean = X[:, self.film_emb_idx, :].mean(dim=1)
-            gf, bf = self.film_embed_to_fp(emb_mean).chunk(2, dim=-1)
-            ge, be = self.film_fp_to_embed(fp_mean).chunk(2, dim=-1)
-            X = X.clone()
-            X[:, self.film_fp_idx, :] = (
-                (1.0 + gf.unsqueeze(1)) * X[:, self.film_fp_idx, :] + bf.unsqueeze(1)
-            )
-            X[:, self.film_emb_idx, :] = (
-                (1.0 + ge.unsqueeze(1)) * X[:, self.film_emb_idx, :] + be.unsqueeze(1)
-            )
         if self.training and self.mod_drop_p > 0:
             B = X.size(0)
             mask = (torch.rand(B, self.seq_len, device=X.device)
