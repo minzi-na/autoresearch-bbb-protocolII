@@ -171,13 +171,15 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     bad = 0
     epoch_log = []
 
+    smooth = 0.1
     for epoch in range(num_epochs):
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
+            y_smooth = y * (1.0 - smooth) + smooth * 0.5
             optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            loss = loss_fn(model(x), y_smooth)
             loss.backward()
             optimizer.step()
             tr_loss_sum += loss.item()
