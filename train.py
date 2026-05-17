@@ -78,30 +78,19 @@ class SpatialGatingUnit(nn.Module):
         super().__init__()
         assert d_ffn % n_heads == 0
         self.n_heads = n_heads
-        self.head_dim = d_ffn // n_heads
-        self.seq_len = seq_len
         self.norm = nn.LayerNorm(d_ffn)
-        self.q_proj = nn.Linear(d_ffn, d_ffn)
-        self.k_proj = nn.Linear(d_ffn, d_ffn)
-        self.v_proj = nn.Linear(d_ffn, d_ffn)
-        nn.init.eye_(self.v_proj.weight)
-        nn.init.zeros_(self.v_proj.bias)
-        diag_mask = torch.eye(seq_len, dtype=torch.bool)
-        self.register_buffer("diag_mask", diag_mask)
+        self.spatial_projs = nn.ModuleList([
+            nn.Conv1d(seq_len, seq_len, kernel_size=1) for _ in range(n_heads)
+        ])
+        for proj in self.spatial_projs:
+            nn.init.constant_(proj.bias, 1.0)
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v = self.norm(v)
-        B, S, D = v.shape
-        H = self.n_heads
-        q = self.q_proj(v).view(B, S, H, self.head_dim).transpose(1, 2)
-        k = self.k_proj(v).view(B, S, H, self.head_dim).transpose(1, 2)
-        vp = self.v_proj(v).view(B, S, H, self.head_dim).transpose(1, 2)
-        attn = (q @ k.transpose(-2, -1)) / (self.head_dim ** 0.5)
-        attn = attn.masked_fill(self.diag_mask, float("-inf"))
-        attn = torch.softmax(attn, dim=-1)
-        out = (attn @ vp).transpose(1, 2).contiguous().view(B, S, D)
-        return u * out
+        v_chunks = v.chunk(self.n_heads, dim=-1)
+        v = torch.cat([proj(c) for proj, c in zip(self.spatial_projs, v_chunks)], dim=-1)
+        return u * v
 
 
 class gMLPBlock(nn.Module):
