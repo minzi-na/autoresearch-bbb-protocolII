@@ -152,6 +152,10 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
+        # iter36: input feature dropout on the raw flat vector (zeros random
+        # individual features across modalities, distinct from modality-token
+        # dropout that zeros whole modalities). p=0.10 mild.
+        self.input_drop = nn.Dropout(0.10)
         # iter20: per-modality learnable scale (init=1.0, identity at start)
         self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
@@ -167,6 +171,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.mod_drop_p = 0.15
 
     def forward(self, x):
+        x = self.input_drop(x)
         chunks = torch.split(x, self.mod_dims, dim=1)
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
