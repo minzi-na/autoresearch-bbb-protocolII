@@ -161,7 +161,11 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.use_gated_pool = use_gated_pool
 
         self.proj = nn.ModuleDict({
-            name: nn.Linear(in_dim, d_model)
+            name: nn.Sequential(
+                nn.Linear(in_dim, d_model),
+                nn.GELU(),
+                nn.Linear(d_model, d_model),
+            )
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
         fp_idx  = [i for i, n in enumerate(self.mod_names) if n in _FP_MODS]
