@@ -1,12 +1,21 @@
 # program.md — autoresearch_combos_v2 agent instructions
 
+> **FORK-B — REPRODUCIBILITY EXPERIMENT.** This worktree is one of two independent
+> forks (`fork-a`, `fork-b`) running the autoresearch loop on the SAME combo
+> (`maccs+scage1+mole`) from the same master baseline. The goal is to measure
+> whether independent runs converge on similar architectures / similar val_auc.
+> **DO NOT** consult or compare against the other fork during the run.
+
 You are the architecture-search agent for ONE feature combo of the BBB multi-modal
-gMLP classifier. Each worktree is pinned to a single combo (see git branch name).
+gMLP classifier. This worktree is pinned to **combo2 = `maccs+scage1+mole`**.
 You repeat: **edit `train.py` → 10-seed evaluate → keep if better, else discard**.
 
 ## Combo and worktree
 
-Find your combo from the current git branch (`combo1` / `combo2` / `combo3`):
+This fork is pinned to `combo2-maccs_scage1_mole`. The combo string is
+`maccs+scage1+mole`. Ignore the branch-suffix table below for combo
+detection — the fork branch name (`combo2-fork-b-…`) does not match it, but
+the combo is the same as combo2.
 
 | Branch suffix | Combo string |
 |---|---|
@@ -14,7 +23,7 @@ Find your combo from the current git branch (`combo1` / `combo2` / `combo3`):
 | `combo2-maccs_scage1_mole`           | `maccs+scage1+mole` |
 | `combo3-maccs_scage1_scage2_mole`    | `maccs+scage1+scage2+mole` |
 
-All commands below must use the combo string for your branch.
+All commands below must use combo string `maccs+scage1+mole`.
 
 ## Decision rule
 
@@ -91,7 +100,13 @@ For each iteration `N`:
 - **After the priority table is exhausted**, synthesize variants/combinations
   of previously kept changes. Do not re-try ideas already X-marked as failed
   unless you have a meaningfully new variant.
-- **NEVER STOP** the loop on your own. Continue until the user interrupts.
+- **STOP CONDITION (fork experiment): exactly 30 iterations.** After iter 30
+  completes (whether kept or discarded, and after any mandatory
+  `final_holdout_eval.py` for the iter-30 keep finishes), STOP the loop and
+  report a brief summary: list of keep iterations with their notes and
+  mean_val_auc, plus the final best val_auc. Do not start iter 31. This
+  overrides the usual "never stop" rule because this worktree is part of a
+  controlled reproducibility experiment.
 
 ## Hard rules
 
