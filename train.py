@@ -218,15 +218,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     ema_decay = 0.9
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
-    y_all = []
-    for _, y in train_loader:
-        y_all.append(y)
-    y_all = torch.cat(y_all)
-    n_pos = (y_all == 1).float().sum().clamp_min(1.0)
-    n_neg = (y_all == 0).float().sum().clamp_min(1.0)
-    pw = (n_neg / n_pos).to(device)
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=pw)
-
     for epoch in range(num_epochs):
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
