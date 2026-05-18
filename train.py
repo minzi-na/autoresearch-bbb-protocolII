@@ -215,7 +215,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
-    ema_decay = 0.998
+    ema_decay = 0.9
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     for epoch in range(num_epochs):
@@ -228,15 +228,16 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
-            with torch.no_grad():
-                for k, v in model.state_dict().items():
-                    if v.dtype.is_floating_point:
-                        ema_state[k].mul_(ema_decay).add_(v.detach(), alpha=1.0 - ema_decay)
-                    else:
-                        ema_state[k].copy_(v.detach())
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
+
+        with torch.no_grad():
+            for k, v in model.state_dict().items():
+                if v.dtype.is_floating_point:
+                    ema_state[k].mul_(ema_decay).add_(v.detach(), alpha=1.0 - ema_decay)
+                else:
+                    ema_state[k].copy_(v.detach())
 
         saved_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
         model.load_state_dict(ema_state)
