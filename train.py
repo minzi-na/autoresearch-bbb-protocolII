@@ -366,7 +366,6 @@ def build_and_train(
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
         lr=BASE_CONFIG["lr"],
-        eps=1e-9,
     )
     loss_fn = nn.BCEWithLogitsLoss()
 
