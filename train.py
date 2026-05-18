@@ -206,7 +206,10 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # using decoupled wd=0.01 — a real weight-decay regularizer to complement
     # EMA / DropPath / mod_drop, with the same lr as before.
     lr = optimizer.param_groups[0]["lr"]
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    # iter63: AdamW with stronger momentum (beta1=0.95 vs default 0.9).
+    optimizer = optim.AdamW(
+        model.parameters(), lr=lr, weight_decay=0.01, betas=(0.95, 0.999),
+    )
 
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
