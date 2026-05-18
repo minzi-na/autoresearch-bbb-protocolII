@@ -84,17 +84,15 @@ class SpatialGatingUnit(nn.Module):
         ])
         for proj in self.spatial_projs:
             nn.init.constant_(proj.bias, 1.0)
-        self.gate_scale = nn.Parameter(torch.zeros(n_heads))
+        self.gate_scale = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v_normed = self.norm(v)
         v_chunks = v_normed.chunk(self.n_heads, dim=-1)
-        gated_chunks = []
-        for i, (proj, c) in enumerate(zip(self.spatial_projs, v_chunks)):
-            g_i = self.gate_scale[i].exp()
-            gated_chunks.append(g_i * proj(c) + (1.0 - g_i) * c)
-        v_out = torch.cat(gated_chunks, dim=-1)
+        v_mixed = torch.cat([proj(c) for proj, c in zip(self.spatial_projs, v_chunks)], dim=-1)
+        g = self.gate_scale.exp()
+        v_out = g * v_mixed + (1.0 - g) * v_normed
         return u * v_out
 
 
