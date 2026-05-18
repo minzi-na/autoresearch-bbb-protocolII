@@ -162,7 +162,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.mod_dims  = [mod_dims[n] for n in self.mod_names]
         self.seq_len   = len(self.mod_names)
         self.use_gated_pool = use_gated_pool
-        self.mod_drop_p = 0.15
 
         self.proj = nn.ModuleDict({
             name: nn.Linear(in_dim, d_model)
@@ -184,10 +183,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
-        if self.training and self.mod_drop_p > 0.0:
-            B = X.size(0)
-            mask = (torch.rand(B, self.seq_len, device=X.device) > self.mod_drop_p).float()
-            X = X * mask.unsqueeze(-1)
         X = self.film(X)
         X = self.backbone(X)
         if self.use_gated_pool:
