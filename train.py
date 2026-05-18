@@ -208,21 +208,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     lr = optimizer.param_groups[0]["lr"]
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 
-    # iter77: initialize the head's bias to log(n_pos/n_neg) computed from
-    # the train loader so the very first sigmoid output reflects the class
-    # prior (~2.27:1 BBB+:BBB- on the merged pool). Speeds up early-epoch
-    # convergence and may give EMA a slightly better starting trajectory.
-    with torch.no_grad():
-        n_pos = 0.0
-        n_neg = 0.0
-        for _, _yb in train_loader:
-            n_pos += float((_yb == 1).sum().item())
-            n_neg += float((_yb == 0).sum().item())
-        if n_pos > 0 and n_neg > 0:
-            bias_init = float(np.log(n_pos / n_neg))
-            if hasattr(model, "head") and isinstance(model.head, nn.Linear):
-                model.head.bias.fill_(bias_init)
-
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
     # iter27: warmup the EMA — during the first ema_warmup_epochs epochs,
