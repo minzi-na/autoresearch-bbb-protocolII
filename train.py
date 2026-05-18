@@ -157,7 +157,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         if self.training and self.mod_drop_p > 0:
             B = X.shape[0]
             mask = (torch.rand(B, self.seq_len, device=X.device) > self.mod_drop_p).float()
-            X = X * mask.unsqueeze(-1)
+            X = X * mask.unsqueeze(-1) / (1 - self.mod_drop_p)
         X = self.backbone(X)
         X = self.final_norm(X)
         if self.use_gated_pool:
