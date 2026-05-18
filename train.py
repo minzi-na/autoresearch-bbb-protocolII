@@ -233,7 +233,23 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            # iter80: R-Drop — two forward passes (different dropout masks)
+            # with a symmetric Bernoulli-KL consistency term added to the BCE.
+            # Forces predictions to be invariant to the stochastic forward
+            # (mod_drop / DROP_V_PATH / Dropout) — independent of regularizer
+            # strength, complements them with a self-consistency constraint.
+            logits1 = model(x)
+            logits2 = model(x)
+            bce_loss = 0.5 * (loss_fn(logits1, y) + loss_fn(logits2, y))
+            eps = 1e-7
+            p1 = torch.sigmoid(logits1).clamp(eps, 1.0 - eps)
+            p2 = torch.sigmoid(logits2).clamp(eps, 1.0 - eps)
+            kl_12 = (p1 * (p1.log() - p2.log())
+                     + (1 - p1) * ((1 - p1).log() - (1 - p2).log())).mean()
+            kl_21 = (p2 * (p2.log() - p1.log())
+                     + (1 - p2) * ((1 - p2).log() - (1 - p1).log())).mean()
+            rdrop_alpha = 1.0
+            loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
             optimizer.step()
             with torch.no_grad():
