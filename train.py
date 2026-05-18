@@ -170,7 +170,8 @@ class MultiModalGMLPFromFlat(nn.Module):
         # iter83: mod_drop 0.15 -> 0.10 on top of R-Drop. R-Drop provides
         # consistency-based regularization; reducing explicit token-zero
         # noise may free up signal that R-Drop is already protecting.
-        self.mod_drop_p = 0.10
+        # iter92: fine sweep up 0.10 -> 0.12 (between 0.10 keep and 0.15 worse).
+        self.mod_drop_p = 0.12
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
