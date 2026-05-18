@@ -104,7 +104,7 @@ class gMLPBlock(nn.Module):
     def forward(self, x):
         residual = x
         x = self.norm(x)
-        x = F.relu(self.channel_proj1(x)) ** 2
+        x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
         return x + residual
