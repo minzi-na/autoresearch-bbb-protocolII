@@ -164,6 +164,11 @@ class MultiModalGMLPFromFlat(nn.Module):
             attn_scores = (X @ self.pool_query) / (X.shape[-1] ** 0.5)
             attn_w = torch.softmax(attn_scores, dim=1)
             attn_pool = (X * attn_w.unsqueeze(-1)).sum(dim=1)
+            d_last = X.shape[-1:]
+            gated = F.layer_norm(gated, d_last)
+            mean = F.layer_norm(mean, d_last)
+            max_pool = F.layer_norm(max_pool, d_last)
+            attn_pool = F.layer_norm(attn_pool, d_last)
             pw = torch.softmax(self.pool_logits, dim=0)
             Xp = pw[0] * gated + pw[1] * mean + pw[2] * max_pool + pw[3] * attn_pool
         else:
