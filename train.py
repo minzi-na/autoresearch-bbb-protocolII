@@ -94,27 +94,33 @@ class SpatialGatingUnit(nn.Module):
 
 
 class gMLPBlock(nn.Module):
-    def __init__(self, d_model, d_ffn, seq_len):
+    def __init__(self, d_model, d_ffn, seq_len, drop_path=0.0):
         super().__init__()
         self.norm = nn.LayerNorm(d_model)
         self.channel_proj1 = nn.Linear(d_model, d_ffn * 2)
         self.channel_proj2 = nn.Linear(d_ffn, d_model)
         self.sgu = SpatialGatingUnit(d_ffn, seq_len)
+        self.drop_path = drop_path
 
     def forward(self, x):
         residual = x
-        x = self.norm(x)
-        x = F.gelu(self.channel_proj1(x))
-        x = self.sgu(x)
-        x = self.channel_proj2(x)
-        return x + residual
+        y = self.norm(x)
+        y = F.gelu(self.channel_proj1(y))
+        y = self.sgu(y)
+        y = self.channel_proj2(y)
+        if self.training and self.drop_path > 0.0:
+            keep = 1.0 - self.drop_path
+            shape = (y.shape[0],) + (1,) * (y.ndim - 1)
+            mask = y.new_empty(shape).bernoulli_(keep)
+            y = y.div(keep) * mask
+        return y + residual
 
 
 class gMLP(nn.Module):
-    def __init__(self, d_model=256, d_ffn=512, seq_len=256, num_layers=6):
+    def __init__(self, d_model=256, d_ffn=512, seq_len=256, num_layers=6, drop_path=0.0):
         super().__init__()
         self.model = nn.Sequential(
-            *[gMLPBlock(d_model, d_ffn, seq_len) for _ in range(num_layers)]
+            *[gMLPBlock(d_model, d_ffn, seq_len, drop_path=drop_path) for _ in range(num_layers)]
         )
 
     def forward(self, x):
@@ -168,7 +174,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         emb_idx = [i for i, n in enumerate(self.mod_names) if n not in _FP_MODS]
         self.film = CrossModalFiLM(d_model, fp_idx, emb_idx)
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
-                             d_ffn=d_ffn, num_layers=depth)
+                             d_ffn=d_ffn, num_layers=depth, drop_path=0.05)
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.pool_queries = nn.Parameter(torch.zeros(2, d_model))
