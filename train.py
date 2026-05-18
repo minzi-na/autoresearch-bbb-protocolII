@@ -122,9 +122,7 @@ class gMLPBlock(nn.Module):
     def forward(self, x):
         residual = x
         x = self.norm(x)
-        # iter61: GELU -> SiLU (Swish). Smoother gradient near zero;
-        # often a small-margin trade vs GELU.
-        x = F.silu(self.channel_proj1(x))
+        x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
         return x + residual
