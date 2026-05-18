@@ -86,7 +86,7 @@ class SpatialGatingUnit(nn.Module):
         v = self.norm(v)
         s = self.gate_scale.exp()
         v = s * self.spatial_proj(v) + (1 - s) * v
-        return u * v
+        return F.gelu(u) * v
 
 
 class gMLPBlock(nn.Module):
