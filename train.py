@@ -164,10 +164,6 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
-        self.proj_norm = nn.ModuleDict({
-            name: nn.LayerNorm(d_model)
-            for name in self.mod_names
-        })
         fp_idx  = [i for i, n in enumerate(self.mod_names) if n in _FP_MODS]
         emb_idx = [i for i, n in enumerate(self.mod_names) if n not in _FP_MODS]
         self.film = CrossModalFiLM(d_model, fp_idx, emb_idx)
@@ -181,7 +177,7 @@ class MultiModalGMLPFromFlat(nn.Module):
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
-        tokens = [self.proj_norm[name](self.proj[name](chunk))
+        tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = self.film(X)
