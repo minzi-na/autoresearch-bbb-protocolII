@@ -282,7 +282,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         score = val_auc if es_metric == "val_auc" else val_loss
         if is_better(score, best_score):
             best_score = score
-            best_state = deepcopy(ema_state)
+            # iter68: save ONLINE weights at the EMA-best epoch (instead of
+            # ema_state). Selection uses EMA, but the returned model uses the
+            # online trajectory's snapshot — tests whether EMA is mainly a
+            # better epoch selector vs a better final weight set.
+            best_state = deepcopy(online_state)
             best_epoch = epoch
             bad = 0
         else:
