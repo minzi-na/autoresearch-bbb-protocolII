@@ -164,16 +164,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         # iter6: per-sample modality token dropout (zero a whole modality
         # token with prob p) — encourages cross-modal redundancy / prevents
         # single-modality overfit. Active in training only.
-        # iter72: per-modality drop probabilities — fingerprints (sparse,
-        # informative bits) get lower drop, pretrained embeddings (dense,
-        # more redundant) get higher drop. Order matches mod_names; falls
-        # back to 0.15 for unknown modality names.
-        fp_names = {"maccs", "avalon", "ecfp", "tt"}
-        per_p = [0.10 if n in fp_names else 0.20 for n in self.mod_names]
-        self.register_buffer(
-            "mod_drop_p",
-            torch.tensor(per_p, dtype=torch.float32),
-        )
+        self.mod_drop_p = 0.15
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
@@ -181,11 +172,10 @@ class MultiModalGMLPFromFlat(nn.Module):
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = X * self.proj_scale.view(1, self.seq_len, 1)
-        if self.training:
+        if self.training and self.mod_drop_p > 0:
             B = X.size(0)
-            drop_p = self.mod_drop_p.view(1, self.seq_len)
             mask = (torch.rand(B, self.seq_len, device=X.device)
-                    > drop_p).float()
+                    > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         if self.use_gated_pool:
