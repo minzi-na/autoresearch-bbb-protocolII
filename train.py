@@ -155,7 +155,6 @@ class MultiModalGMLPFromFlat(nn.Module):
     def __init__(self, mod_dims: OrderedDict, d_model=512, d_ffn=1024,
                  depth=4, dropout=0.2, use_gated_pool=True):
         super().__init__()
-        depth = 5
         self.mod_names = list(mod_dims.keys())
         self.mod_dims  = [mod_dims[n] for n in self.mod_names]
         self.seq_len   = len(self.mod_names)
