@@ -95,6 +95,7 @@ class gMLPBlock(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         self.channel_proj1 = nn.Linear(d_model, d_ffn * 2)
         self.channel_proj2 = nn.Linear(d_ffn, d_model)
+        self.post_norm = nn.LayerNorm(d_model)
         self.sgu = SpatialGatingUnit(d_ffn, seq_len)
         self.drop_path = drop_path
 
@@ -106,6 +107,7 @@ class gMLPBlock(nn.Module):
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
+        x = self.post_norm(x)
         return x + residual
 
 
