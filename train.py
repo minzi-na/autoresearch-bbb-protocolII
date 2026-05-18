@@ -200,9 +200,6 @@ class MultiModalGMLPFromFlat(nn.Module):
 
 def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc"):
-    lr = optimizer.param_groups[0].get("lr", 1e-4)
-    wd = optimizer.param_groups[0].get("weight_decay", 1e-5)
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
     if es_metric == "val_loss":
         best_score = float("inf")
         is_better  = lambda new, cur: new < cur
