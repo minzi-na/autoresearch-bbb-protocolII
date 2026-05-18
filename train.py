@@ -154,11 +154,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         })
         # iter20: per-modality learnable scale (init=1.0, identity at start)
         self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
-        # iter69: per-modality type embedding — a d_model-dim learnable
-        # bias direction per modality position, init=0 so the model starts
-        # identical to without. Orthogonal to proj_scale (scalar) and gives
-        # SGU / pool a stable per-modality signature in input space.
-        self.type_emb = nn.Parameter(torch.zeros(self.seq_len, d_model))
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
@@ -177,7 +172,6 @@ class MultiModalGMLPFromFlat(nn.Module):
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = X * self.proj_scale.view(1, self.seq_len, 1)
-        X = X + self.type_emb.view(1, self.seq_len, -1)
         if self.training and self.mod_drop_p > 0:
             B = X.size(0)
             mask = (torch.rand(B, self.seq_len, device=X.device)
