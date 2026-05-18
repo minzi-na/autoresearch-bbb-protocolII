@@ -164,7 +164,8 @@ class MultiModalGMLPFromFlat(nn.Module):
         # iter6: per-sample modality token dropout (zero a whole modality
         # token with prob p) — encourages cross-modal redundancy / prevents
         # single-modality overfit. Active in training only.
-        self.mod_drop_p = 0.15
+        # iter66: finer sweep between 0.10 (fail) and 0.15 (current keep).
+        self.mod_drop_p = 0.13
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
