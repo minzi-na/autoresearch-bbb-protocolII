@@ -112,20 +112,12 @@ class SpatialGatingUnit(nn.Module):
 
 
 class gMLPBlock(nn.Module):
-    # iter74: per-channel LayerScale on the residual branch, init=0.1.
-    # At start the block contributes only 10% of its output relative to the
-    # residual, biasing the network toward identity; the scale grows via
-    # gradient. Distinct from iter34 (init=1.0, no early bias).
-    LAYER_SCALE_INIT = 0.1
-
     def __init__(self, d_model, d_ffn, seq_len):
         super().__init__()
         self.norm = nn.LayerNorm(d_model)
         self.channel_proj1 = nn.Linear(d_model, d_ffn * 2)
         self.channel_proj2 = nn.Linear(d_ffn, d_model)
         self.sgu = SpatialGatingUnit(d_ffn, seq_len)
-        self.layer_scale = nn.Parameter(
-            torch.full((d_model,), self.LAYER_SCALE_INIT))
 
     def forward(self, x):
         residual = x
@@ -133,7 +125,7 @@ class gMLPBlock(nn.Module):
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
-        return self.layer_scale * x + residual
+        return x + residual
 
 
 class gMLP(nn.Module):
