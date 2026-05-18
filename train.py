@@ -78,6 +78,7 @@ class SpatialGatingUnit(nn.Module):
         super().__init__()
         assert d_ffn % n_heads == 0
         self.n_heads = n_heads
+        self.seq_len = seq_len
         self.norm = nn.LayerNorm(d_ffn)
         self.spatial_projs = nn.ModuleList([
             nn.Conv1d(seq_len, seq_len, kernel_size=1) for _ in range(n_heads)
@@ -85,12 +86,17 @@ class SpatialGatingUnit(nn.Module):
         for proj in self.spatial_projs:
             nn.init.constant_(proj.bias, 1.0)
         self.gate_scale = nn.Parameter(torch.zeros(1))
+        self.register_buffer("diag_mask", (1.0 - torch.eye(seq_len)).unsqueeze(-1))
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v_normed = self.norm(v)
         v_chunks = v_normed.chunk(self.n_heads, dim=-1)
-        v_mixed = torch.cat([proj(c) for proj, c in zip(self.spatial_projs, v_chunks)], dim=-1)
+        outs = []
+        for proj, c in zip(self.spatial_projs, v_chunks):
+            w_masked = proj.weight * self.diag_mask
+            outs.append(F.conv1d(c, w_masked, proj.bias))
+        v_mixed = torch.cat(outs, dim=-1)
         g = self.gate_scale.exp()
         v_out = g * v_mixed + (1.0 - g) * v_normed
         return u * v_out
