@@ -215,9 +215,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
-    for pg in optimizer.param_groups:
-        pg["lr"] = 2e-4
-
     ema_decay = 0.9
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
