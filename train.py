@@ -226,6 +226,10 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     best_epoch = -1
     bad = 0
     epoch_log = []
+    # iter71: top-2 EMA snapshot averaging (sweep down from iter70 K=3).
+    # K=3 missed iter38 by 3.3e-5; less smoothing may keep more peak signal.
+    top_k_states = []
+    TOP_K = 2
 
     for epoch in range(num_epochs):
         model.train()
@@ -287,10 +291,27 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             bad = 0
         else:
             bad += 1
-            if bad >= patience:
-                break
 
-    if best_state is not None:
+        cand_score = val_auc if es_metric == "val_auc" else -val_loss
+        top_k_states.append((cand_score, deepcopy(ema_state)))
+        top_k_states.sort(key=lambda x: -x[0])
+        top_k_states = top_k_states[:TOP_K]
+
+        if bad >= patience:
+            break
+
+    if top_k_states:
+        ref = top_k_states[0][1]
+        avg_state = {}
+        for k, v in ref.items():
+            if v.dtype.is_floating_point:
+                stack = torch.stack(
+                    [s[1][k].float() for s in top_k_states], dim=0)
+                avg_state[k] = stack.mean(dim=0).to(v.dtype)
+            else:
+                avg_state[k] = v
+        model.load_state_dict(avg_state)
+    elif best_state is not None:
         model.load_state_dict(best_state)
 
     return model, {
