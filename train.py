@@ -193,13 +193,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     ema_decay = 0.999
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
-    warmup_epochs = 3
-    def _lr_lambda(epoch):
-        if epoch < warmup_epochs:
-            return (epoch + 1) / warmup_epochs
-        return 1.0
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, _lr_lambda)
-
     for epoch in range(num_epochs):
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
@@ -248,8 +241,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             "val_auc":    round(val_auc, 6),
             "val_mcc":    round(val_mcc, 6),
         })
-
-        scheduler.step()
 
         score = val_auc if es_metric == "val_auc" else val_loss
         if is_better(score, best_score):
