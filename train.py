@@ -202,6 +202,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     ema_decay = 0.999
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+    plateau_sched = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='max', factor=0.5, patience=5)
 
     for epoch in range(num_epochs):
         model.train()
@@ -253,6 +255,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         })
 
         score = val_auc if es_metric == "val_auc" else val_loss
+        plateau_sched.step(val_auc)
         if is_better(score, best_score):
             best_score = score
             best_state = {k: v.detach().clone() for k, v in ema_state.items()}
