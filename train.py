@@ -205,13 +205,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # iter38: replace the passed-in Adam (wd=1e-5 ~ effectively 0) with AdamW
     # using decoupled wd=0.01 — a real weight-decay regularizer to complement
     # EMA / DropPath / mod_drop, with the same lr as before.
-    # iter73: switch AdamW -> NAdam (Nesterov-momentum Adam) for slightly
-    # different first-moment dynamics. NAdam's weight_decay is L2-style, so
-    # we set wd=0 in the optimizer and apply decoupled wd manually each step
-    # to preserve iter38's wd=0.01 regularization regime.
     lr = optimizer.param_groups[0]["lr"]
-    optimizer = optim.NAdam(model.parameters(), lr=lr, weight_decay=0.0)
-    decoupled_wd = 0.01
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
@@ -241,13 +236,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             loss = loss_fn(model(x), y)
             loss.backward()
             optimizer.step()
-            # iter73: decoupled weight decay applied post-step (matches AdamW
-            # decoupled semantics on top of NAdam).
-            if decoupled_wd > 0:
-                with torch.no_grad():
-                    for p in model.parameters():
-                        if p.requires_grad and p.dim() >= 2:
-                            p.data.mul_(1.0 - lr * decoupled_wd)
             with torch.no_grad():
                 msd = model.state_dict()
                 in_warmup = epoch < ema_warmup_epochs
