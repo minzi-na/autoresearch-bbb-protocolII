@@ -112,6 +112,13 @@ class SpatialGatingUnit(nn.Module):
 
 
 class gMLPBlock(nn.Module):
+    # iter75: per-sample block-level DropPath (stochastic depth). With prob p
+    # the block's update is zeroed for that sample (residual-only forward);
+    # surviving updates are rescaled by 1/(1-p) so the expected output
+    # magnitude stays the same as without DropPath. Small p=0.05 retry on
+    # the current AdamW+EMA stack (iter15 used p=0.10 on pre-AdamW stack).
+    DROP_PATH_P = 0.05
+
     def __init__(self, d_model, d_ffn, seq_len):
         super().__init__()
         self.norm = nn.LayerNorm(d_model)
@@ -125,6 +132,10 @@ class gMLPBlock(nn.Module):
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
+        if self.training and self.DROP_PATH_P > 0:
+            keep = (torch.rand(x.size(0), 1, 1, device=x.device)
+                    >= self.DROP_PATH_P).float()
+            x = x * keep / (1.0 - self.DROP_PATH_P)
         return x + residual
 
 
