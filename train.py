@@ -172,7 +172,14 @@ class MultiModalGMLPFromFlat(nn.Module):
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = X * self.proj_scale.view(1, self.seq_len, 1)
-        if self.training and self.mod_drop_p > 0:
+        # iter67: continuous modality scale noise — replace binary mod_drop
+        # mask with Uniform(0.7, 1.3) per-sample per-modality scale. Same
+        # cross-modal robustness goal but continuous noise structure.
+        if self.training:
+            B = X.size(0)
+            noise = 0.7 + 0.6 * torch.rand(B, self.seq_len, device=X.device)
+            X = X * noise.unsqueeze(-1)
+        if False and self.training and self.mod_drop_p > 0:
             B = X.size(0)
             mask = (torch.rand(B, self.seq_len, device=X.device)
                     > self.mod_drop_p).float()
