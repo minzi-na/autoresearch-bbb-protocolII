@@ -248,7 +248,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                      + (1 - p1) * ((1 - p1).log() - (1 - p2).log())).mean()
             kl_21 = (p2 * (p2.log() - p1.log())
                      + (1 - p2) * ((1 - p2).log() - (1 - p1).log())).mean()
-            rdrop_alpha = 1.0
+            # iter81: sweep R-Drop alpha 1.0 -> 0.5 (less consistency pressure).
+            rdrop_alpha = 0.5
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
             optimizer.step()
