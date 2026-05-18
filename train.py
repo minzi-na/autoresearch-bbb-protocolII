@@ -82,7 +82,9 @@ class SpatialGatingUnit(nn.Module):
     # iter22: per-sample DropPath on the v-mixing path. When dropped,
     # v_out is replaced by 1.0 (identity multiplier), so SGU output collapses
     # to `u` alone — bypassing spatial mixing. Train-time only.
-    DROP_V_PATH = 0.10
+    # iter93: fine sweep 0.10 -> 0.08 on R-Drop stack (iter64 was 0.08 without
+    # R-Drop, failed; iter85 was 0.05 with R-Drop, failed).
+    DROP_V_PATH = 0.08
 
     def __init__(self, d_ffn, seq_len):
         super().__init__()
