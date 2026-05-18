@@ -104,6 +104,7 @@ class gMLPBlock(nn.Module):
             return residual
         x = self.norm(x)
         x = F.gelu(self.channel_proj1(x))
+        x = F.dropout(x, p=0.05, training=self.training)
         x = self.sgu(x)
         x = self.channel_proj2(x)
         return x + residual
