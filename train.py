@@ -73,6 +73,18 @@ def set_seed(seed: int):
 #  EDITABLE — model definition
 # ═══════════════════════════════════════════════════════════════════════════════
 
+class SwiGLUHead(nn.Module):
+    def __init__(self, d_model, hidden, p_drop=0.05):
+        super().__init__()
+        self.gate = nn.Linear(d_model, hidden)
+        self.up = nn.Linear(d_model, hidden)
+        self.down = nn.Linear(hidden, 1)
+        self.drop = nn.Dropout(p_drop)
+
+    def forward(self, x):
+        return self.down(self.drop(F.silu(self.gate(x)) * self.up(x)))
+
+
 class SpatialGatingUnit(nn.Module):
     def __init__(self, d_ffn, seq_len):
         super().__init__()
@@ -149,12 +161,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.attn_head_proj = nn.Linear(d_model, d_model)
             nn.init.eye_(self.attn_head_proj.weight)
             nn.init.zeros_(self.attn_head_proj.bias)
-        self.head = nn.Sequential(
-            nn.Linear(d_model, d_model * 2),
-            nn.SiLU(),
-            nn.Dropout(0.05),
-            nn.Linear(d_model * 2, 1),
-        )
+        self.head = SwiGLUHead(d_model, d_model * 2, p_drop=0.05)
         self.drop = nn.Dropout(dropout)
         self.mod_drop_p = 0.075
 
