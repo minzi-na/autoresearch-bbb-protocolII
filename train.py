@@ -220,20 +220,13 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     ema_warmup = 3
     ema_state = None
 
-    mixup_alpha = 0.2
-
     for epoch in range(num_epochs):
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
-            lam = float(np.random.beta(mixup_alpha, mixup_alpha))
-            perm = torch.randperm(x.size(0), device=x.device)
-            x_mix = lam * x + (1.0 - lam) * x[perm]
-            y_a, y_b = y, y[perm]
             optimizer.zero_grad()
-            pred = model(x_mix)
-            loss = lam * loss_fn(pred, y_a) + (1.0 - lam) * loss_fn(pred, y_b)
+            loss = loss_fn(model(x), y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
