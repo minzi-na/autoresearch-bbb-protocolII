@@ -217,6 +217,9 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     for epoch in range(num_epochs):
+        if epoch == 25:
+            for pg in optimizer.param_groups:
+                pg["lr"] = pg["lr"] * 0.5
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
