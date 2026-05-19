@@ -149,6 +149,9 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.attn_head_proj = nn.Linear(d_model, d_model)
             nn.init.eye_(self.attn_head_proj.weight)
             nn.init.zeros_(self.attn_head_proj.bias)
+        self.post_pool_proj = nn.Linear(d_model, d_model)
+        nn.init.eye_(self.post_pool_proj.weight)
+        nn.init.zeros_(self.post_pool_proj.bias)
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         self.mod_drop_p = 0.075
@@ -184,6 +187,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             Xp = pw[0] * gated + pw[1] * mean + pw[2] * max_pool + pw[3] * attn_pool
         else:
             Xp = X.mean(dim=1)
+        Xp = self.post_pool_proj(Xp)
         Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
