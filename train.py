@@ -191,12 +191,11 @@ class MultiModalGMLPFromFlat(nn.Module):
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         if self.use_gated_pool:
-            # iter115: ablate to mean pool only (skip_gate ablation). If
-            # mean-pool alone matches or beats iter114's 50/50 mix, we save a
-            # parameter; if it loses we keep the mix.
-            Xp = X.mean(dim=1)
-            _ = self.alpha  # keep param in state_dict (do not break loading)
-            _ = self.pool_skip_gate
+            w = torch.softmax(self.alpha, dim=0)
+            gated = (X * w.view(1, -1, 1)).sum(dim=1)
+            mean_pool = X.mean(dim=1)
+            g = torch.sigmoid(self.pool_skip_gate)
+            Xp = g * gated + (1.0 - g) * mean_pool
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
