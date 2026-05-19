@@ -216,12 +216,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
-    optimizer = optim.AdamW(
-        model.parameters(),
-        lr=BASE_CONFIG["lr"],
-        weight_decay=BASE_CONFIG["weight_decay"],
-    )
-
     ema_decay = 0.82
     ema_state = None
 
