@@ -114,12 +114,6 @@ class SpatialGatingUnit(nn.Module):
 
 
 class gMLPBlock(nn.Module):
-    # iter109: per-sample stochastic depth on the block. With prob DROP_PATH,
-    # the whole block update is dropped and the residual passes through
-    # unchanged. Train-time only. iter15/iter75 failed pre-R-Drop+warmup; the
-    # warmed-up R-Drop stack may tolerate this extra regularization better.
-    DROP_PATH = 0.05
-
     def __init__(self, d_model, d_ffn, seq_len):
         super().__init__()
         self.norm = nn.LayerNorm(d_model)
@@ -129,12 +123,11 @@ class gMLPBlock(nn.Module):
 
     def forward(self, x):
         residual = x
-        update = self.channel_proj2(self.sgu(F.gelu(self.channel_proj1(self.norm(x)))))
-        if self.training and self.DROP_PATH > 0:
-            keep = (torch.rand(x.size(0), 1, 1, device=x.device)
-                    >= self.DROP_PATH).float()
-            update = update * keep
-        return update + residual
+        x = self.norm(x)
+        x = F.gelu(self.channel_proj1(x))
+        x = self.sgu(x)
+        x = self.channel_proj2(x)
+        return x + residual
 
 
 class gMLP(nn.Module):
