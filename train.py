@@ -168,6 +168,11 @@ class MultiModalGMLPFromFlat(nn.Module):
         # so each channel can pick its own mix of gated vs mean. Init=0 still
         # gives 50/50 at start.
         self.pool_skip_gate = nn.Parameter(torch.zeros(d_model))
+        # iter117: add max-pool as a third branch. Per-feature softmax over
+        # [gated, mean, max] logits picks a 3-way mix. Init=0 -> uniform 1/3
+        # weights across all 3 at start (the pool_skip_gate is ignored when
+        # pool3_logits exists — see forward).
+        self.pool3_logits = nn.Parameter(torch.zeros(d_model, 3))
         self.head = nn.Linear(d_model, 1)
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
@@ -197,8 +202,13 @@ class MultiModalGMLPFromFlat(nn.Module):
             w = torch.softmax(self.alpha, dim=0)
             gated = (X * w.view(1, -1, 1)).sum(dim=1)
             mean_pool = X.mean(dim=1)
-            g = torch.sigmoid(self.pool_skip_gate)
-            Xp = g * gated + (1.0 - g) * mean_pool
+            max_pool = X.max(dim=1).values
+            # iter117: per-feature 3-way softmax mix over [gated, mean, max].
+            w3 = torch.softmax(self.pool3_logits, dim=-1)
+            Xp = (w3[:, 0] * gated
+                  + w3[:, 1] * mean_pool
+                  + w3[:, 2] * max_pool)
+            _ = self.pool_skip_gate
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
