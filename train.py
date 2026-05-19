@@ -80,27 +80,13 @@ class SpatialGatingUnit(nn.Module):
         self.spatial_proj = nn.Conv1d(seq_len, seq_len, kernel_size=1)
         nn.init.constant_(self.spatial_proj.bias, 1.0)
         self.gate_scale = nn.Parameter(torch.zeros(1))
-        attn_dim = max(d_ffn // 8, 32)
-        self.attn_q = nn.Linear(d_ffn, attn_dim, bias=False)
-        self.attn_k = nn.Linear(d_ffn, attn_dim, bias=False)
-        self.attn_gate = nn.Parameter(torch.full((1,), -5.0))
-        self.attn_scale = attn_dim ** -0.5
-        self.register_buffer("diag_mask", torch.eye(seq_len, dtype=torch.bool))
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v = self.norm(v)
         s = self.gate_scale.exp()
-        v_conv = s * self.spatial_proj(v) + (1 - s) * v
-        q = self.attn_q(v)
-        k = self.attn_k(v)
-        scores = (q @ k.transpose(-2, -1)) * self.attn_scale
-        scores = scores.masked_fill(self.diag_mask, float("-inf"))
-        attn = torch.softmax(scores, dim=-1)
-        v_attn = attn @ v
-        g = torch.sigmoid(self.attn_gate)
-        v_out = (1 - g) * v_conv + g * v_attn
-        return u * v_out
+        v = s * self.spatial_proj(v) + (1 - s) * v
+        return u * v
 
 
 class gMLPBlock(nn.Module):
