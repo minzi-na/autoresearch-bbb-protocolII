@@ -251,15 +251,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             # strength, complements them with a self-consistency constraint.
             logits1 = model(x)
             logits2 = model(x)
-            # iter110: BCE label smoothing 0.05 on warmed R-Drop stack.
-            # iter4/iter62 failed pre-stack; R-Drop's consistency pressure
-            # may pair better with softened targets that reduce over-confidence.
-            ls_smooth = 0.05
-            y_smooth = y * (1.0 - ls_smooth) + ls_smooth * 0.5
-            bce_loss = 0.5 * (
-                F.binary_cross_entropy_with_logits(logits1, y_smooth)
-                + F.binary_cross_entropy_with_logits(logits2, y_smooth)
-            )
+            bce_loss = 0.5 * (loss_fn(logits1, y) + loss_fn(logits2, y))
             eps = 1e-7
             p1 = torch.sigmoid(logits1).clamp(eps, 1.0 - eps)
             p2 = torch.sigmoid(logits2).clamp(eps, 1.0 - eps)
