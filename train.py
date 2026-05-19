@@ -115,6 +115,31 @@ class gMLP(nn.Module):
         return self.model(x)
 
 
+class CrossModalAdaLN(nn.Module):
+    def __init__(self, d_model, fp_idx, emb_idx):
+        super().__init__()
+        self.ln_fp = nn.LayerNorm(d_model, elementwise_affine=False)
+        self.ln_emb = nn.LayerNorm(d_model, elementwise_affine=False)
+        self.embed_to_fp = nn.Linear(d_model, d_model * 2)
+        self.fp_to_embed = nn.Linear(d_model, d_model * 2)
+        nn.init.zeros_(self.embed_to_fp.weight); nn.init.zeros_(self.embed_to_fp.bias)
+        nn.init.zeros_(self.fp_to_embed.weight); nn.init.zeros_(self.fp_to_embed.bias)
+        self.fp_idx = fp_idx
+        self.emb_idx = emb_idx
+
+    def forward(self, X):
+        fp_sum  = X[:, self.fp_idx,  :].mean(1)
+        emb_sum = X[:, self.emb_idx, :].mean(1)
+        gf, bf = self.embed_to_fp(emb_sum).chunk(2, dim=-1)
+        ge, be = self.fp_to_embed(fp_sum).chunk(2, dim=-1)
+        X = X.clone()
+        X_fp_n = self.ln_fp(X[:, self.fp_idx, :])
+        X_emb_n = self.ln_emb(X[:, self.emb_idx, :])
+        X[:, self.fp_idx,  :] = (1 + gf.unsqueeze(1)) * X_fp_n + bf.unsqueeze(1)
+        X[:, self.emb_idx, :] = (1 + ge.unsqueeze(1)) * X_emb_n + be.unsqueeze(1)
+        return X
+
+
 class MultiModalGMLPFromFlat(nn.Module):
     def __init__(self, mod_dims: OrderedDict, d_model=512, d_ffn=1024,
                  depth=4, dropout=0.2, use_gated_pool=True):
@@ -128,6 +153,10 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
+        fp_set = {"maccs", "avalon"}
+        fp_idx = [i for i, n in enumerate(self.mod_names) if n in fp_set]
+        emb_idx = [i for i, n in enumerate(self.mod_names) if n not in fp_set]
+        self.adaln = CrossModalAdaLN(d_model, fp_idx, emb_idx)
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
@@ -141,6 +170,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
+        X = self.adaln(X)
         X = self.backbone(X)
         if self.use_gated_pool:
             scores = (X @ self.pool_query) / (X.size(-1) ** 0.5)
