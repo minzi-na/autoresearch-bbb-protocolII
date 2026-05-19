@@ -156,7 +156,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             nn.Linear(d_model * 2, 1),
         )
         self.drop = nn.Dropout(dropout)
-        self.mod_drop_p = 0.05
+        self.mod_drop_p = 0.075
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
