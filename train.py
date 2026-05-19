@@ -192,7 +192,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     bad = 0
     epoch_log = []
 
-    ema_decay = 0.99
+    ema_decay = 0.999
     ema_state = OrderedDict(
         (k, v.detach().clone()) for k, v in model.state_dict().items()
     )
