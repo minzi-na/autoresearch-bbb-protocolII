@@ -177,7 +177,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            y_smooth = y * 0.9 + 0.05
+            loss = loss_fn(model(x), y_smooth)
             loss.backward()
             optimizer.step()
             tr_loss_sum += loss.item()
