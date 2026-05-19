@@ -189,9 +189,12 @@ class MultiModalGMLPFromFlat(nn.Module):
         cls = self.cls_token.expand(X.size(0), -1, -1)
         X = torch.cat([cls, X], dim=1)
         X = self.backbone(X)
-        Xp = X[:, 0, :]
-        Xp = self.drop(self.norm(Xp))
-        return self.head(Xp).squeeze(-1)
+        Xp = self.norm(X[:, 0, :])
+        if self.training:
+            logits = torch.stack([self.head(self.drop(Xp)) for _ in range(5)], dim=0).mean(0)
+        else:
+            logits = self.head(Xp)
+        return logits.squeeze(-1)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
