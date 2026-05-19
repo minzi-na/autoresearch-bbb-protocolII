@@ -145,7 +145,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.gated_norm = nn.LayerNorm(d_model)
             self.mean_norm = nn.LayerNorm(d_model)
             self.max_norm = nn.LayerNorm(d_model)
-            self.attn_norm = nn.LayerNorm(d_model, elementwise_affine=False)
+            self.attn_norm = nn.LayerNorm(d_model)
             self.attn_head_proj = nn.Linear(d_model, d_model)
             nn.init.eye_(self.attn_head_proj.weight)
             nn.init.zeros_(self.attn_head_proj.bias)
