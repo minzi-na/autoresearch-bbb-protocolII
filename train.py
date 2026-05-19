@@ -133,6 +133,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
+        self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.final_norm = nn.LayerNorm(d_model)
@@ -155,6 +156,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
+        X = X * self.proj_scale.view(1, -1, 1)
         if self.training and self.mod_drop_p > 0:
             B = X.shape[0]
             mask = (torch.rand(B, self.seq_len, device=X.device) > self.mod_drop_p).float()
