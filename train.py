@@ -211,6 +211,10 @@ class MultiModalGMLPFromFlat(nn.Module):
 
 def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc"):
+    # iter119: shadow override patience 10 -> 15 inside train_model. R-Drop +
+    # warmup may slow convergence and require more headroom before triggering
+    # early stop. iter53's same attempt was reverted (different stack).
+    patience = 15
     if es_metric == "val_loss":
         best_score = float("inf")
         is_better  = lambda new, cur: new < cur
