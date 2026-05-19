@@ -182,6 +182,11 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.mod_drop_p = 0.10
 
     def forward(self, x):
+        # iter134: light input feature dropout (p=0.03) on raw flat input.
+        # iter36 used p=0.10 and failed pre-stack; smaller p is gentler input
+        # augmentation that may pair with R-Drop's consistency.
+        if self.training:
+            x = F.dropout(x, p=0.03, training=True)
         chunks = torch.split(x, self.mod_dims, dim=1)
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
