@@ -218,6 +218,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     for param_group in optimizer.param_groups:
         param_group['weight_decay'] = 1e-6
+        param_group['lr'] = 9e-5
 
     ema_decay = 0.82
     ema_state = None
