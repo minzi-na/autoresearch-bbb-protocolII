@@ -192,7 +192,10 @@ class MultiModalGMLPFromFlat(nn.Module):
             mask = (torch.rand(B, self.seq_len, device=X.device)
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
-        X = self.backbone(X)
+        # iter129: residual link over the backbone (X_in + backbone(X_in)).
+        # Adds a direct path from the projected modality tokens to the pool,
+        # making the backbone learn the residual rather than the full mapping.
+        X = X + self.backbone(X)
         if self.use_gated_pool:
             w = torch.softmax(self.alpha, dim=0)
             gated = (X * w.view(1, -1, 1)).sum(dim=1)
