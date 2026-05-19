@@ -249,11 +249,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     epoch_log = []
 
     for epoch in range(num_epochs):
-        # iter132: warmup model.mod_drop_p from 0 to 0.10 over first 5 epochs
-        # (linear ramp). Defer modality regularization until features are
-        # learned, mirroring the R-Drop alpha warmup.
-        if hasattr(model, "mod_drop_p"):
-            model.mod_drop_p = 0.10 * min(1.0, (epoch + 1) / 5.0)
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
