@@ -261,16 +261,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             # strength, complements them with a self-consistency constraint.
             logits1 = model(x)
             logits2 = model(x)
-            # iter127: focal loss (gamma=2) replaces BCE inside R-Drop. Down-
-            # weights easy samples (already-correct, high-confidence) and
-            # focuses on hard ones, complementing R-Drop's distributional
-            # consistency from the data side.
-            def _focal(logits_, y_, gamma=2.0):
-                bce = F.binary_cross_entropy_with_logits(
-                    logits_, y_, reduction="none")
-                pt = torch.exp(-bce)
-                return ((1.0 - pt) ** gamma * bce).mean()
-            bce_loss = 0.5 * (_focal(logits1, y) + _focal(logits2, y))
+            bce_loss = 0.5 * (loss_fn(logits1, y) + loss_fn(logits2, y))
             eps = 1e-7
             p1 = torch.sigmoid(logits1).clamp(eps, 1.0 - eps)
             p2 = torch.sigmoid(logits2).clamp(eps, 1.0 - eps)
