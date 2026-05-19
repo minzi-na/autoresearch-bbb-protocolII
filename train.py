@@ -149,7 +149,11 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.attn_head_proj = nn.Linear(d_model, d_model)
             nn.init.eye_(self.attn_head_proj.weight)
             nn.init.zeros_(self.attn_head_proj.bias)
-        self.head = nn.Linear(d_model, 1)
+        self.head = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.GELU(),
+            nn.Linear(d_model, 1),
+        )
         self.drop = nn.Dropout(dropout)
         self.mod_drop_p = 0.075
 
