@@ -177,6 +177,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     bad = 0
     epoch_log = []
 
+    ema_decay = 0.999
+    ema_state = OrderedDict(
+        (k, v.detach().clone()) for k, v in model.state_dict().items()
+    )
+
     for epoch in range(num_epochs):
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
@@ -186,9 +191,21 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             loss = loss_fn(model(x), y)
             loss.backward()
             optimizer.step()
+            with torch.no_grad():
+                for k, p in model.state_dict().items():
+                    if ema_state[k].is_floating_point():
+                        ema_state[k].mul_(ema_decay).add_(
+                            p.detach(), alpha=1 - ema_decay)
+                    else:
+                        ema_state[k].copy_(p.detach())
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
+
+        backup_state = OrderedDict(
+            (k, v.detach().clone()) for k, v in model.state_dict().items()
+        )
+        model.load_state_dict(ema_state)
 
         model.eval()
         val_loss_sum, val_batches = 0.0, 0
@@ -216,10 +233,14 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             "val_mcc":    round(val_mcc, 6),
         })
 
+        model.load_state_dict(backup_state)
+
         score = val_auc if es_metric == "val_auc" else val_loss
         if is_better(score, best_score):
             best_score = score
-            best_state = deepcopy(model.state_dict())
+            best_state = OrderedDict(
+                (k, v.detach().clone()) for k, v in ema_state.items()
+            )
             best_epoch = epoch
             bad = 0
         else:
