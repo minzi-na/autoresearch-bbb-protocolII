@@ -216,9 +216,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = 1.1e-4
-
     ema_decay = 0.815
     ema_state = None
 
