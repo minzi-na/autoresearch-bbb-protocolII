@@ -343,12 +343,23 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
 
 def eval_model(model, loader):
-    model.eval()
+    # iter133: test-time augmentation. K=4 train-mode forwards averaged with
+    # the standard eval-mode forward (5 sources total). Stochastic forwards
+    # (mod_drop / DROP_V_PATH / Dropout) average out and smooth predictions,
+    # complementing R-Drop's training-time consistency objective.
+    K_TTA = 4
     y_true, y_prob = [], []
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
-            probs = torch.sigmoid(model(x)).cpu().numpy()
+            model.eval()
+            p_eval = torch.sigmoid(model(x))
+            p_sum = p_eval
+            model.train()
+            for _ in range(K_TTA):
+                p_sum = p_sum + torch.sigmoid(model(x))
+            model.eval()
+            probs = (p_sum / (K_TTA + 1)).cpu().numpy()
             y_prob.extend(probs)
             y_true.extend(y.numpy())
 
