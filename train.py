@@ -205,6 +205,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             optimizer.zero_grad()
             loss = loss_fn(model(x), y)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             with torch.no_grad():
                 for k, p in model.state_dict().items():
@@ -362,7 +363,7 @@ def build_and_train(
         use_gated_pool=BASE_CONFIG["use_gated_pool"],
     ).to(device)
 
-    optimizer = optim.Adam(
+    optimizer = optim.AdamW(
         model.parameters(),
         lr=BASE_CONFIG["lr"],
         weight_decay=BASE_CONFIG["weight_decay"],
