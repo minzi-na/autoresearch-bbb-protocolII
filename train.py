@@ -158,10 +158,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
-        # iter130: replace pre-head LayerNorm with BatchNorm1d. iter55 was
-        # BN1d on raw input (failed). Different position. Batches see ~7800/128
-        # ≈ 60 batches/epoch, batch=128 — BN stats should be stable on these.
-        self.norm = nn.BatchNorm1d(d_model)
+        self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
         # iter114: sigmoid skip-gate between gated and mean pool. init=0 so
