@@ -168,13 +168,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         # so each channel can pick its own mix of gated vs mean. Init=0 still
         # gives 50/50 at start.
         self.pool_skip_gate = nn.Parameter(torch.zeros(d_model))
-        # iter118: input-dependent additive correction to the static gate —
-        # g[b,c] = sigmoid(pool_skip_gate[c] + pool_gate_input(mean(X))[b,c]).
-        # Init=0 weights/bias so the correction is 0 at start, exactly matching
-        # iter116 behavior.
-        self.pool_gate_input = nn.Linear(d_model, d_model)
-        nn.init.zeros_(self.pool_gate_input.weight)
-        nn.init.zeros_(self.pool_gate_input.bias)
         self.head = nn.Linear(d_model, 1)
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
@@ -204,9 +197,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             w = torch.softmax(self.alpha, dim=0)
             gated = (X * w.view(1, -1, 1)).sum(dim=1)
             mean_pool = X.mean(dim=1)
-            # iter118: per-sample input-dependent additive correction.
-            g_logits = self.pool_skip_gate.unsqueeze(0) + self.pool_gate_input(mean_pool)
-            g = torch.sigmoid(g_logits)
+            g = torch.sigmoid(self.pool_skip_gate)
             Xp = g * gated + (1.0 - g) * mean_pool
         else:
             Xp = X.mean(dim=1)
