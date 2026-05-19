@@ -219,13 +219,20 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     ema_decay = 0.82
     ema_state = None
 
+    focal_gamma = 1.5
+    def train_loss_fn(logits, targets):
+        bce = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+        p = torch.sigmoid(logits)
+        pt = targets * p + (1.0 - targets) * (1.0 - p)
+        return ((1.0 - pt).pow(focal_gamma) * bce).mean()
+
     for epoch in range(num_epochs):
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            loss = train_loss_fn(model(x), y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
