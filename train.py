@@ -259,21 +259,30 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             # Forces predictions to be invariant to the stochastic forward
             # (mod_drop / DROP_V_PATH / Dropout) — independent of regularizer
             # strength, complements them with a self-consistency constraint.
+            # iter122: 3-way R-Drop with 3 forwards and 3 pairwise symmetric
+            # Bernoulli-KL terms. Stronger consistency than 2-way; ~50% more
+            # compute per step (3 forwards instead of 2). Warmup unchanged.
             logits1 = model(x)
             logits2 = model(x)
-            bce_loss = 0.5 * (loss_fn(logits1, y) + loss_fn(logits2, y))
+            logits3 = model(x)
+            bce_loss = (1.0 / 3.0) * (loss_fn(logits1, y)
+                                      + loss_fn(logits2, y)
+                                      + loss_fn(logits3, y))
             eps = 1e-7
             p1 = torch.sigmoid(logits1).clamp(eps, 1.0 - eps)
             p2 = torch.sigmoid(logits2).clamp(eps, 1.0 - eps)
-            kl_12 = (p1 * (p1.log() - p2.log())
-                     + (1 - p1) * ((1 - p1).log() - (1 - p2).log())).mean()
-            kl_21 = (p2 * (p2.log() - p1.log())
-                     + (1 - p2) * ((1 - p2).log() - (1 - p1).log())).mean()
-            # iter106: warmup R-Drop alpha 0 -> 1.0 over first 5 epochs (linear).
-            # Defer consistency penalty until model has learned useful features,
-            # avoiding penalizing noise-driven predictions in epoch 0-1.
+            p3 = torch.sigmoid(logits3).clamp(eps, 1.0 - eps)
+            def _sym_bern_kl(a, b):
+                kl_ab = (a * (a.log() - b.log())
+                         + (1 - a) * ((1 - a).log() - (1 - b).log())).mean()
+                kl_ba = (b * (b.log() - a.log())
+                         + (1 - b) * ((1 - b).log() - (1 - a).log())).mean()
+                return 0.5 * (kl_ab + kl_ba)
+            consistency = (1.0 / 3.0) * (_sym_bern_kl(p1, p2)
+                                         + _sym_bern_kl(p1, p3)
+                                         + _sym_bern_kl(p2, p3))
             rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
-            loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
+            loss = bce_loss + rdrop_alpha * consistency
             loss.backward()
             optimizer.step()
             with torch.no_grad():
