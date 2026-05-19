@@ -179,8 +179,6 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.pool_queries = nn.Parameter(torch.zeros(2, d_model))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
-        self.skip_proj = nn.Linear(sum(self.mod_dims), 1, bias=False)
-        nn.init.zeros_(self.skip_proj.weight)
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
@@ -193,8 +191,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         X = self.backbone(X)
         Xp = X[:, 0, :]
         Xp = self.drop(self.norm(Xp))
-        skip_logit = self.skip_proj(x).squeeze(-1)
-        return self.head(Xp).squeeze(-1) + skip_logit
+        return self.head(Xp).squeeze(-1)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
