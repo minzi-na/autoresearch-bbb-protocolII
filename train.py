@@ -161,6 +161,10 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
+        # iter114: sigmoid skip-gate between gated and mean pool. init=0 so
+        # sigmoid(0)=0.5 => 50/50 mix at start; lets training shift toward
+        # the better aggregation. iter7/iter43 failed pre-stack.
+        self.pool_skip_gate = nn.Parameter(torch.zeros(1))
         self.head = nn.Linear(d_model, 1)
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
@@ -188,7 +192,10 @@ class MultiModalGMLPFromFlat(nn.Module):
         X = self.backbone(X)
         if self.use_gated_pool:
             w = torch.softmax(self.alpha, dim=0)
-            Xp = (X * w.view(1, -1, 1)).sum(dim=1)
+            gated = (X * w.view(1, -1, 1)).sum(dim=1)
+            mean_pool = X.mean(dim=1)
+            g = torch.sigmoid(self.pool_skip_gate)
+            Xp = g * gated + (1.0 - g) * mean_pool
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
