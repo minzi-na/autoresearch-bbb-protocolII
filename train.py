@@ -154,13 +154,6 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
-        # iter101: LayerNorm after per-modality projection on R-Drop stack.
-        # iter5/iter50 both failed pre-R-Drop; R-Drop's consistency objective
-        # interacts strongly with token scale, and normalizing each modality
-        # token's projected output may help the two stochastic forwards align.
-        self.proj_norm = nn.ModuleDict({
-            name: nn.LayerNorm(d_model) for name in self.mod_names
-        })
         # iter20: per-modality learnable scale (init=1.0, identity at start)
         self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
@@ -183,7 +176,7 @@ class MultiModalGMLPFromFlat(nn.Module):
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
-        tokens = [self.proj_norm[name](self.proj[name](chunk))
+        tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = X * self.proj_scale.view(1, self.seq_len, 1)
