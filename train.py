@@ -167,6 +167,9 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     else:
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
+    ema_decay = 0.999
+    ema_params = {n: p.detach().clone() for n, p in model.named_parameters()}
+
     best_state = None
     best_epoch = -1
     bad = 0
@@ -181,9 +184,17 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             loss = loss_fn(model(x), y)
             loss.backward()
             optimizer.step()
+            with torch.no_grad():
+                for n, p in model.named_parameters():
+                    ema_params[n].mul_(ema_decay).add_(p.detach(), alpha=1 - ema_decay)
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
+
+        backup = {n: p.detach().clone() for n, p in model.named_parameters()}
+        with torch.no_grad():
+            for n, p in model.named_parameters():
+                p.data.copy_(ema_params[n])
 
         model.eval()
         val_loss_sum, val_batches = 0.0, 0
@@ -219,8 +230,12 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             bad = 0
         else:
             bad += 1
-            if bad >= patience:
-                break
+
+        with torch.no_grad():
+            for n, p in model.named_parameters():
+                p.data.copy_(backup[n])
+        if bad >= patience:
+            break
 
     if best_state is not None:
         model.load_state_dict(best_state)
