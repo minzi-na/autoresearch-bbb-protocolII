@@ -77,27 +77,14 @@ class SpatialGatingUnit(nn.Module):
     def __init__(self, d_ffn, seq_len):
         super().__init__()
         self.norm = nn.LayerNorm(d_ffn)
-        self.d_ffn = d_ffn
-        self.Wq = nn.Linear(d_ffn, d_ffn)
-        self.Wk = nn.Linear(d_ffn, d_ffn)
-        self.Wv = nn.Linear(d_ffn, d_ffn)
-        nn.init.eye_(self.Wv.weight)
-        nn.init.zeros_(self.Wv.bias)
-        self.attn_drop = nn.Dropout(0.1)
-        self.register_buffer("diag_mask", torch.eye(seq_len, dtype=torch.bool))
+        self.spatial_proj = nn.Conv1d(seq_len, seq_len, kernel_size=1)
+        nn.init.constant_(self.spatial_proj.bias, 1.0)
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v = self.norm(v)
-        q = self.Wq(v)
-        k = self.Wk(v)
-        val = self.Wv(v)
-        scores = (q @ k.transpose(-1, -2)) / (self.d_ffn ** 0.5)
-        scores = scores.masked_fill(self.diag_mask.unsqueeze(0), float("-inf"))
-        attn = torch.softmax(scores, dim=-1)
-        attn = self.attn_drop(attn)
-        out = attn @ val
-        return u * out
+        v = self.spatial_proj(v)
+        return u * v
 
 
 class gMLPBlock(nn.Module):
