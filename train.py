@@ -112,8 +112,11 @@ class gMLPBlock(nn.Module):
 class gMLP(nn.Module):
     def __init__(self, d_model=256, d_ffn=512, seq_len=256, num_layers=6):
         super().__init__()
+        denom = max(num_layers - 1, 1)
         self.model = nn.Sequential(
-            *[gMLPBlock(d_model, d_ffn, seq_len) for _ in range(num_layers)]
+            *[gMLPBlock(d_model, d_ffn, seq_len,
+                        drop_path=i * 0.05 / denom)
+              for i in range(num_layers)]
         )
 
     def forward(self, x):
