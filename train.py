@@ -227,7 +227,9 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # iter88: AdamW wd 0.01 -> 0.005 on R-Drop stack. iter40 was a failure
     # without R-Drop; R-Drop adds reg, so the optimal explicit wd may shift
     # lower (similar to mod_drop / head dropout reductions in iter83/iter86).
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.005)
+    # iter137: lr 1e-4 -> 5e-5 (half) on warmed R-Drop+skipgate stack.
+    optimizer = optim.AdamW(model.parameters(), lr=lr * 0.5,
+                            weight_decay=0.005)
 
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
