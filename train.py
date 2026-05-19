@@ -341,7 +341,7 @@ def build_and_train(
         use_gated_pool=BASE_CONFIG["use_gated_pool"],
     ).to(device)
 
-    optimizer = optim.AdamW(
+    optimizer = optim.Adam(
         model.parameters(),
         lr=BASE_CONFIG["lr"],
         weight_decay=BASE_CONFIG["weight_decay"],
