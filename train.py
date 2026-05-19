@@ -74,7 +74,7 @@ def set_seed(seed: int):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class SpatialGatingUnit(nn.Module):
-    def __init__(self, d_ffn, seq_len, n_heads=2):
+    def __init__(self, d_ffn, seq_len, n_heads=2, mix_drop_p=0.05):
         super().__init__()
         assert d_ffn % n_heads == 0
         self.n_heads = n_heads
@@ -85,14 +85,18 @@ class SpatialGatingUnit(nn.Module):
         for proj in self.spatial_projs:
             nn.init.constant_(proj.bias, 1.0)
         self.gate_scale = nn.Parameter(torch.zeros(1))
+        self.mix_drop_p = mix_drop_p
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v_normed = self.norm(v)
-        v_chunks = v_normed.chunk(self.n_heads, dim=-1)
-        v_mixed = torch.cat([proj(c) for proj, c in zip(self.spatial_projs, v_chunks)], dim=-1)
-        g = self.gate_scale.exp()
-        v_out = g * v_mixed + (1.0 - g) * v_normed
+        if self.training and self.mix_drop_p > 0 and torch.rand(1, device=x.device).item() < self.mix_drop_p:
+            v_out = v_normed
+        else:
+            v_chunks = v_normed.chunk(self.n_heads, dim=-1)
+            v_mixed = torch.cat([proj(c) for proj, c in zip(self.spatial_projs, v_chunks)], dim=-1)
+            g = self.gate_scale.exp()
+            v_out = g * v_mixed + (1.0 - g) * v_normed
         return u * v_out
 
 
