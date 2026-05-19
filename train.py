@@ -83,7 +83,7 @@ class SpatialGatingUnit(nn.Module):
             nn.Conv1d(seq_len, seq_len, kernel_size=1) for _ in range(n_heads)
         ])
         for proj in self.spatial_projs:
-            nn.init.constant_(proj.bias, 1.0)
+            nn.init.constant_(proj.bias, 0.5)
         self.gate_scale = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
