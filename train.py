@@ -154,13 +154,6 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
-        # iter143: per-modality LayerNorm after projection. iter101 failed
-        # pre-proj_scale-ablation; with proj_scale gone (iter142), the
-        # post-projection scales are no longer modulated, so LN may stabilize
-        # the multi-modality token scales.
-        self.proj_norm = nn.ModuleDict({
-            name: nn.LayerNorm(d_model) for name in self.mod_names
-        })
         # iter20: per-modality learnable scale (init=1.0, identity at start)
         self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
@@ -190,7 +183,7 @@ class MultiModalGMLPFromFlat(nn.Module):
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
-        tokens = [self.proj_norm[name](self.proj[name](chunk))
+        tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         # iter142: ablate iter20's proj_scale (skip its application). iter51's
