@@ -77,15 +77,28 @@ class SpatialGatingUnit(nn.Module):
     def __init__(self, d_ffn, seq_len):
         super().__init__()
         self.norm = nn.LayerNorm(d_ffn)
-        self.spatial_proj = nn.Conv1d(seq_len, seq_len, kernel_size=1)
-        nn.init.constant_(self.spatial_proj.bias, 1.0)
+        self.seq_len = seq_len
+        self.d_ffn = d_ffn
+        self.wq = nn.Linear(d_ffn, d_ffn)
+        self.wk = nn.Linear(d_ffn, d_ffn)
+        self.wv = nn.Linear(d_ffn, d_ffn)
+        nn.init.eye_(self.wv.weight)
+        nn.init.zeros_(self.wv.bias)
         self.gate_scale = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
         v = self.norm(v)
+        q = self.wq(v)
+        k = self.wk(v)
+        val = self.wv(v)
+        scores = (q @ k.transpose(-1, -2)) / (self.d_ffn ** 0.5)
+        diag = torch.eye(self.seq_len, device=v.device, dtype=torch.bool)
+        scores = scores.masked_fill(diag, float('-inf'))
+        attn = torch.softmax(scores, dim=-1)
+        out = attn @ val
         g = self.gate_scale.exp()
-        v = g * self.spatial_proj(v) + (1 - g) * v
+        v = g * out + (1 - g) * v
         return u * v
 
 
