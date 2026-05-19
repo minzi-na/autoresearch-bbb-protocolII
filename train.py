@@ -171,7 +171,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     else:
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
-    ema_decay = 0.99
+    ema_decay = 0.999
     ema_params = {n: p.detach().clone() for n, p in model.named_parameters()}
 
     best_state = None
