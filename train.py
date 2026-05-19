@@ -73,6 +73,16 @@ def set_seed(seed: int):
 #  EDITABLE — model definition
 # ═══════════════════════════════════════════════════════════════════════════════
 
+class RMSNorm(nn.Module):
+    def __init__(self, d, eps=1e-5):
+        super().__init__()
+        self.scale = nn.Parameter(torch.ones(d))
+        self.eps = eps
+
+    def forward(self, x):
+        return x * self.scale * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+
+
 class SpatialGatingUnit(nn.Module):
     def __init__(self, d_ffn, seq_len):
         super().__init__()
@@ -145,7 +155,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.gated_norm = nn.LayerNorm(d_model)
             self.mean_norm = nn.LayerNorm(d_model)
             self.max_norm = nn.LayerNorm(d_model)
-            self.attn_norm = nn.LayerNorm(d_model)
+            self.attn_norm = RMSNorm(d_model)
             self.attn_head_proj = nn.Linear(d_model, d_model)
             nn.init.eye_(self.attn_head_proj.weight)
             nn.init.zeros_(self.attn_head_proj.bias)
