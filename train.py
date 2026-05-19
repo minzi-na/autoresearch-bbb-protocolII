@@ -152,7 +152,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.head = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.SiLU(),
-            nn.LayerNorm(d_model),
             nn.Linear(d_model, 1),
         )
         self.drop = nn.Dropout(dropout)
