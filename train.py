@@ -198,6 +198,31 @@ class MultiModalGMLPFromFlat(nn.Module):
 #  EDITABLE — training / eval
 # ═══════════════════════════════════════════════════════════════════════════════
 
+class Lookahead:
+    def __init__(self, base_optimizer, k=5, alpha=0.5):
+        self.base_optimizer = base_optimizer
+        self.k = k
+        self.alpha = alpha
+        self.step_count = 0
+        self.param_groups = base_optimizer.param_groups
+        self.slow_weights = [
+            [p.detach().clone() for p in g['params']]
+            for g in self.param_groups
+        ]
+
+    def zero_grad(self):
+        self.base_optimizer.zero_grad()
+
+    def step(self):
+        self.base_optimizer.step()
+        self.step_count += 1
+        if self.step_count % self.k == 0:
+            for group, slow_group in zip(self.param_groups, self.slow_weights):
+                for fast_p, slow_p in zip(group['params'], slow_group):
+                    slow_p.data.add_(fast_p.data - slow_p.data, alpha=self.alpha)
+                    fast_p.data.copy_(slow_p.data)
+
+
 def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc"):
     if es_metric == "val_loss":
@@ -215,6 +240,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     epoch_log = []
 
     patience = 15
+
+    optimizer = Lookahead(optimizer, k=5, alpha=0.5)
 
     ema_decay = 0.82
     ema_state = None
