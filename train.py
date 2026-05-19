@@ -178,8 +178,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         if use_gated_pool:
             self.pool_queries = nn.Parameter(torch.zeros(2, d_model))
         self.head = nn.Linear(d_model, 1)
-        with torch.no_grad():
-            self.head.bias.fill_(0.82)
         self.drop = nn.Dropout(dropout)
 
     def forward(self, x):
