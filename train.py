@@ -133,15 +133,14 @@ class CrossModalFiLM(nn.Module):
         nn.init.zeros_(self.fp_to_embed.weight); nn.init.zeros_(self.fp_to_embed.bias)
         self.fp_idx, self.emb_idx = fp_idx, emb_idx
         self.ln = nn.LayerNorm(d_model, elementwise_affine=False)
-        self.ln_mean = nn.LayerNorm(d_model, elementwise_affine=False)
 
     def forward(self, X):
         if not self.fp_idx or not self.emb_idx:
             return X
         fp_tokens  = X[:, self.fp_idx,  :]
         emb_tokens = X[:, self.emb_idx, :]
-        fp_sum  = self.ln_mean(fp_tokens.mean(1))
-        emb_sum = self.ln_mean(emb_tokens.mean(1))
+        fp_sum  = fp_tokens.mean(1)
+        emb_sum = emb_tokens.mean(1)
         gf, bf = self.embed_to_fp(emb_sum).chunk(2, dim=-1)
         ge, be = self.fp_to_embed(fp_sum).chunk(2, dim=-1)
         fp_norm  = self.ln(fp_tokens)
