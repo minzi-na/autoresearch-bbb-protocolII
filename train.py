@@ -161,6 +161,10 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
+        # iter103: input-dependent attention pooling query (init=0 so initial
+        # scores are uniform — matches softmax(alpha)=uniform at init).
+        # Active in parallel with self.alpha; final w = softmax(alpha + scores).
+        self.pool_query = nn.Parameter(torch.zeros(d_model))
         self.head = nn.Linear(d_model, 1)
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
@@ -187,8 +191,13 @@ class MultiModalGMLPFromFlat(nn.Module):
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         if self.use_gated_pool:
-            w = torch.softmax(self.alpha, dim=0)
-            Xp = (X * w.view(1, -1, 1)).sum(dim=1)
+            # iter103: combine learnable per-position alpha with per-sample
+            # content scores. With pool_query init=0, scores=0 at start, so
+            # w == softmax(alpha) — identical to baseline pooling at init.
+            d = X.size(-1)
+            scores = (X @ self.pool_query) / (d ** 0.5)
+            w = torch.softmax(self.alpha.view(1, -1) + scores, dim=1)
+            Xp = (X * w.unsqueeze(-1)).sum(dim=1)
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
