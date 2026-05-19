@@ -253,6 +253,16 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
+            # iter135: mixup with alpha=0.1 (gentle Beta) on warmed R-Drop stack.
+            # iter45 used 0.2 pre-R-Drop and failed; R-Drop's consistency makes
+            # the prediction surface smoother, so mixup-interpolated labels
+            # should be less destabilizing.
+            mixup_alpha = 0.1
+            lam = np.random.beta(mixup_alpha, mixup_alpha)
+            lam = max(lam, 1.0 - lam)
+            perm = torch.randperm(x.size(0), device=device)
+            x = lam * x + (1.0 - lam) * x[perm]
+            y = lam * y + (1.0 - lam) * y[perm]
             optimizer.zero_grad()
             # iter80: R-Drop — two forward passes (different dropout masks)
             # with a symmetric Bernoulli-KL consistency term added to the BCE.
