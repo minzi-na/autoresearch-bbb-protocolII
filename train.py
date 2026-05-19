@@ -116,9 +116,16 @@ class gMLPBlock(nn.Module):
 class gMLP(nn.Module):
     def __init__(self, d_model=256, d_ffn=512, seq_len=256, num_layers=6):
         super().__init__()
-        self.model = nn.Sequential(
-            *[gMLPBlock(d_model, d_ffn, seq_len) for _ in range(num_layers)]
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=8,
+            dim_feedforward=d_ffn,
+            dropout=0.1,
+            activation='gelu',
+            batch_first=True,
+            norm_first=True,
         )
+        self.model = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
     def forward(self, x):
         return self.model(x)
