@@ -278,7 +278,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             best_state = {k: v.detach().clone() for k, v in ema_state.items()}
             best_epoch = epoch
             bad = 0
-            ema_state = {k: v.detach().clone() for k, v in saved_state.items()}
         else:
             bad += 1
 
