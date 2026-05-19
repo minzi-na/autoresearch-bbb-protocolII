@@ -78,6 +78,7 @@ class SpatialGatingUnit(nn.Module):
         super().__init__()
         assert d_ffn % n_heads == 0
         self.n_heads = n_heads
+        self.norm_u = nn.LayerNorm(d_ffn)
         self.norm = nn.LayerNorm(d_ffn)
         self.spatial_projs = nn.ModuleList([
             nn.Conv1d(seq_len, seq_len, kernel_size=1) for _ in range(n_heads)
@@ -88,12 +89,13 @@ class SpatialGatingUnit(nn.Module):
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
+        u_normed = self.norm_u(u)
         v_normed = self.norm(v)
         v_chunks = v_normed.chunk(self.n_heads, dim=-1)
         v_mixed = torch.cat([proj(c) for proj, c in zip(self.spatial_projs, v_chunks)], dim=-1)
         g = self.gate_scale.exp()
         v_out = g * v_mixed + (1.0 - g) * v_normed
-        return u * v_out
+        return u_normed * v_out
 
 
 class gMLPBlock(nn.Module):
