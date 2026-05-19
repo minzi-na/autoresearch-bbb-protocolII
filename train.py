@@ -198,44 +198,6 @@ class MultiModalGMLPFromFlat(nn.Module):
 #  EDITABLE — training / eval
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class SAM:
-    def __init__(self, base_optimizer, rho=0.05):
-        self.base_optimizer = base_optimizer
-        self.rho = rho
-        self.param_groups = base_optimizer.param_groups
-        self._saved_e = {}
-
-    @torch.no_grad()
-    def first_step(self):
-        grad_norm_sq = 0.0
-        for g in self.param_groups:
-            for p in g['params']:
-                if p.grad is None:
-                    continue
-                grad_norm_sq += p.grad.detach().pow(2).sum().item()
-        grad_norm = grad_norm_sq ** 0.5
-        scale = self.rho / (grad_norm + 1e-12)
-        for g in self.param_groups:
-            for p in g['params']:
-                if p.grad is None:
-                    continue
-                e = p.grad * scale
-                p.add_(e)
-                self._saved_e[id(p)] = e
-
-    @torch.no_grad()
-    def second_step(self):
-        for g in self.param_groups:
-            for p in g['params']:
-                e = self._saved_e.pop(id(p), None)
-                if e is not None:
-                    p.sub_(e)
-        self.base_optimizer.step()
-
-    def zero_grad(self):
-        self.base_optimizer.zero_grad()
-
-
 def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc"):
     if es_metric == "val_loss":
@@ -254,8 +216,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
-    optimizer = SAM(optimizer, rho=0.05)
-
     ema_decay = 0.82
     ema_state = None
 
@@ -267,12 +227,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             optimizer.zero_grad()
             loss = loss_fn(model(x), y)
             loss.backward()
-            optimizer.first_step()
-            optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
-            loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.second_step()
+            optimizer.step()
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
