@@ -142,6 +142,14 @@ class gMLP(nn.Module):
 
 
 class MultiModalGMLPFromFlat(nn.Module):
+    # iter102: cross-modal FiLM (category-based, safe-init) on R-Drop stack.
+    # combo1 = maccs+avalon+scage2+mole: fp_idx = [0, 1] (maccs, avalon),
+    # emb_idx = [2, 3] (scage2, mole). FiLM weight/bias init to zero so the
+    # transform starts as identity (gamma=1+0=1, beta=0) — degrades to
+    # baseline at step 0, then learns conditioning gradually.
+    FILM_FP_NAMES = ("maccs", "avalon")
+    FILM_EMB_NAMES = ("scage2", "mole")
+
     def __init__(self, mod_dims: OrderedDict, d_model=512, d_ffn=1024,
                  depth=4, dropout=0.2, use_gated_pool=True):
         super().__init__()
@@ -156,6 +164,24 @@ class MultiModalGMLPFromFlat(nn.Module):
         })
         # iter20: per-modality learnable scale (init=1.0, identity at start)
         self.proj_scale = nn.Parameter(torch.ones(self.seq_len))
+
+        # iter102: index buckets for cross-modal FiLM (combo1 only).
+        fp_idx  = [i for i, n in enumerate(self.mod_names)
+                   if n in self.FILM_FP_NAMES]
+        emb_idx = [i for i, n in enumerate(self.mod_names)
+                   if n in self.FILM_EMB_NAMES]
+        self._film_active = len(fp_idx) > 0 and len(emb_idx) > 0
+        if self._film_active:
+            self.register_buffer("_film_fp_idx",
+                                 torch.tensor(fp_idx, dtype=torch.long))
+            self.register_buffer("_film_emb_idx",
+                                 torch.tensor(emb_idx, dtype=torch.long))
+            self.film_emb_to_fp = nn.Linear(d_model, d_model * 2)
+            self.film_fp_to_emb = nn.Linear(d_model, d_model * 2)
+            nn.init.zeros_(self.film_emb_to_fp.weight)
+            nn.init.zeros_(self.film_emb_to_fp.bias)
+            nn.init.zeros_(self.film_fp_to_emb.weight)
+            nn.init.zeros_(self.film_fp_to_emb.bias)
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
@@ -180,6 +206,23 @@ class MultiModalGMLPFromFlat(nn.Module):
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
         X = X * self.proj_scale.view(1, self.seq_len, 1)
+        if self._film_active:
+            fp_idx  = self._film_fp_idx
+            emb_idx = self._film_emb_idx
+            fp_ctx  = X.index_select(1, fp_idx).mean(dim=1)
+            emb_ctx = X.index_select(1, emb_idx).mean(dim=1)
+            gf, bf = self.film_emb_to_fp(emb_ctx).chunk(2, dim=-1)
+            ge, be = self.film_fp_to_emb(fp_ctx).chunk(2, dim=-1)
+            X_new = X.clone()
+            X_new.index_copy_(
+                1, fp_idx,
+                (1 + gf.unsqueeze(1)) * X.index_select(1, fp_idx)
+                + bf.unsqueeze(1))
+            X_new.index_copy_(
+                1, emb_idx,
+                (1 + ge.unsqueeze(1)) * X.index_select(1, emb_idx)
+                + be.unsqueeze(1))
+            X = X_new
         if self.training and self.mod_drop_p > 0:
             B = X.size(0)
             mask = (torch.rand(B, self.seq_len, device=X.device)
