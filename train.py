@@ -189,12 +189,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         cls = self.cls_token.expand(X.size(0), -1, -1)
         X = torch.cat([cls, X], dim=1)
         X = self.backbone(X)
-        cls_out = X[:, 0, :]
-        non_cls = X[:, 1:, :]
-        scores = (non_cls @ self.pool_queries.t()) / (self.pool_queries.size(-1) ** 0.5)
-        w = scores.softmax(dim=1)
-        pooled = (w.unsqueeze(-1) * non_cls.unsqueeze(2)).sum(dim=1).mean(dim=1)
-        Xp = cls_out + pooled
+        Xp = X[:, 0, :]
         Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
