@@ -269,10 +269,10 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                      + (1 - p1) * ((1 - p1).log() - (1 - p2).log())).mean()
             kl_21 = (p2 * (p2.log() - p1.log())
                      + (1 - p2) * ((1 - p2).log() - (1 - p1).log())).mean()
-            # iter106: warmup R-Drop alpha 0 -> peak over first 5 epochs (linear).
-            # iter124: lower peak 1.0 -> 0.8 (sweep down). iter81 (no-warmup
-            # alpha=0.5) failed; warmup may shift the optimal peak slightly.
-            rdrop_alpha = 0.8 * min(1.0, (epoch + 1) / 5.0)
+            # iter106: warmup R-Drop alpha 0 -> 1.0 over first 5 epochs (linear).
+            # Defer consistency penalty until model has learned useful features,
+            # avoiding penalizing noise-driven predictions in epoch 0-1.
+            rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
             optimizer.step()
