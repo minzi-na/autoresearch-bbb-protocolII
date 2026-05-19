@@ -346,7 +346,7 @@ def build_and_train(
         lr=BASE_CONFIG["lr"],
         weight_decay=BASE_CONFIG["weight_decay"],
     )
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(0.7, device=device))
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(0.6, device=device))
 
     model, train_info = train_model(
         model, optimizer, train_loader, val_loader, loss_fn,
