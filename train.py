@@ -161,10 +161,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
-            # iter131: learnable temperature on softmax(alpha) pool weighting.
-            # log_T init=0 -> T=1, identical to baseline. Network can learn to
-            # sharpen (T<1) or smooth (T>1) the modality weights.
-            self.alpha_log_temp = nn.Parameter(torch.zeros(1))
         # iter114: sigmoid skip-gate between gated and mean pool. init=0 so
         # sigmoid(0)=0.5 => 50/50 mix at start; lets training shift toward
         # the better aggregation. iter7/iter43 failed pre-stack.
@@ -198,9 +194,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         if self.use_gated_pool:
-            # iter131: divide alpha by T = exp(alpha_log_temp).
-            T = self.alpha_log_temp.exp()
-            w = torch.softmax(self.alpha / T, dim=0)
+            w = torch.softmax(self.alpha, dim=0)
             gated = (X * w.view(1, -1, 1)).sum(dim=1)
             mean_pool = X.mean(dim=1)
             g = torch.sigmoid(self.pool_skip_gate)
