@@ -114,12 +114,20 @@ class SpatialGatingUnit(nn.Module):
 
 
 class gMLPBlock(nn.Module):
+    # iter126: per-block per-channel LayerScale (init=1e-2) on the update
+    # path. iter34 (init=1.0) and iter74 (init=0.1) failed pre-stack; smaller
+    # init heavily damps the block's contribution early on, letting the
+    # backbone behave near-identity until the channel scales grow.
+    LAYER_SCALE_INIT = 1e-2
+
     def __init__(self, d_model, d_ffn, seq_len):
         super().__init__()
         self.norm = nn.LayerNorm(d_model)
         self.channel_proj1 = nn.Linear(d_model, d_ffn * 2)
         self.channel_proj2 = nn.Linear(d_ffn, d_model)
         self.sgu = SpatialGatingUnit(d_ffn, seq_len)
+        self.layer_scale = nn.Parameter(
+            torch.full((d_model,), self.LAYER_SCALE_INIT))
 
     def forward(self, x):
         residual = x
@@ -127,7 +135,7 @@ class gMLPBlock(nn.Module):
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
-        return x + residual
+        return self.layer_scale * x + residual
 
 
 class gMLP(nn.Module):
