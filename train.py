@@ -325,10 +325,7 @@ def build_and_train(
         lr=BASE_CONFIG["lr"],
         weight_decay=BASE_CONFIG["weight_decay"],
     )
-    n_pos = (y_train == 1).float().sum()
-    n_neg = (y_train == 0).float().sum()
-    pos_weight = (n_neg / n_pos).to(device)
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    loss_fn = nn.BCEWithLogitsLoss()
 
     model, train_info = train_model(
         model, optimizer, train_loader, val_loader, loss_fn,
