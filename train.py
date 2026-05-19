@@ -15,7 +15,6 @@ Do NOT edit:
   - device handling
 """
 
-import math
 import random
 from copy import deepcopy
 from collections import OrderedDict
@@ -167,14 +166,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     else:
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
-    warmup_epochs = 5
-    def lr_lambda(epoch):
-        if epoch < warmup_epochs:
-            return (epoch + 1) / warmup_epochs
-        p = (epoch - warmup_epochs) / max(1, num_epochs - warmup_epochs)
-        return 0.5 * (1 + math.cos(math.pi * p)) * 0.99 + 0.01
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-
     best_state = None
     best_epoch = -1
     bad = 0
@@ -188,12 +179,10 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             optimizer.zero_grad()
             loss = loss_fn(model(x), y)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
-        scheduler.step()
 
         model.eval()
         val_loss_sum, val_batches = 0.0, 0
@@ -331,7 +320,7 @@ def build_and_train(
         use_gated_pool=BASE_CONFIG["use_gated_pool"],
     ).to(device)
 
-    optimizer = optim.AdamW(
+    optimizer = optim.Adam(
         model.parameters(),
         lr=BASE_CONFIG["lr"],
         weight_decay=BASE_CONFIG["weight_decay"],
