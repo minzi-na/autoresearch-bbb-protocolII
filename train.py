@@ -97,10 +97,6 @@ class SpatialGatingUnit(nn.Module):
         ])
         for proj in self.spatial_proj:
             nn.init.constant_(proj.bias, 1.0)
-        # iter104: learnable residual scale on the spatial-mix path. Init=0 so
-        # exp(0)=1 → at start, spatial path is used at full strength (identical
-        # to baseline). Lets the network learn to dampen or amplify mixing.
-        self.gate_log_scale = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
@@ -110,7 +106,6 @@ class SpatialGatingUnit(nn.Module):
             [proj(vc) for proj, vc in zip(self.spatial_proj, v_chunks)],
             dim=-1,
         )
-        v_out = self.gate_log_scale.exp() * v_out
         if self.training and self.DROP_V_PATH > 0:
             keep = (torch.rand(x.size(0), 1, 1, device=x.device)
                     >= self.DROP_V_PATH).float()
