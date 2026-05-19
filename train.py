@@ -217,7 +217,13 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            logits = model(x)
+            bce = F.binary_cross_entropy_with_logits(logits, y, reduction="none")
+            with torch.no_grad():
+                p = torch.sigmoid(logits)
+                pt = y * p + (1 - y) * (1 - p)
+                focal_weight = (1 - pt) ** 0.5
+            loss = (focal_weight * bce).mean()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
