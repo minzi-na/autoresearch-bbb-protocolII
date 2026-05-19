@@ -135,12 +135,16 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.pool_query = nn.Parameter(torch.zeros(d_model))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
+        self.mod_drop_p = 0.10
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
+        if self.training and self.mod_drop_p > 0:
+            mask = (torch.rand(X.size(0), self.seq_len, device=X.device) > self.mod_drop_p).float()
+            X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         if self.use_gated_pool:
             scores = (X @ self.pool_query) / (X.size(-1) ** 0.5)
