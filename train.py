@@ -121,18 +121,18 @@ class MultiModalGMLPFromFlat(nn.Module):
         super().__init__()
         self.mod_names = list(mod_dims.keys())
         self.mod_dims  = [mod_dims[n] for n in self.mod_names]
-        self.seq_len   = len(self.mod_names)
+        self.n_mod     = len(self.mod_names)
+        self.seq_len   = self.n_mod + 1
         self.use_gated_pool = use_gated_pool
 
         self.proj = nn.ModuleDict({
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
         self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
-        if use_gated_pool:
-            self.pool_query = nn.Parameter(torch.zeros(d_model))
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
 
@@ -141,13 +141,10 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
+        cls = self.cls_token.expand(X.size(0), -1, -1)
+        X = torch.cat([cls, X], dim=1)
         X = self.backbone(X)
-        if self.use_gated_pool:
-            scores = (X @ self.pool_query) / (X.size(-1) ** 0.5)
-            w = torch.softmax(scores, dim=1)
-            Xp = (w.unsqueeze(-1) * X).sum(dim=1)
-        else:
-            Xp = X.mean(dim=1)
+        Xp = X[:, 0, :]
         Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
