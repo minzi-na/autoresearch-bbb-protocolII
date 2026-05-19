@@ -217,11 +217,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
-            if torch.rand(1).item() < 0.5:
-                lam = float(np.random.beta(0.4, 0.4))
-                idx = torch.randperm(x.shape[0], device=x.device)
-                x = lam * x + (1 - lam) * x[idx]
-                y = lam * y + (1 - lam) * y[idx]
             loss = loss_fn(model(x), y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
