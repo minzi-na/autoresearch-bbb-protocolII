@@ -252,12 +252,15 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             logits1 = model(x)
             logits2 = model(x)
             bce_loss = 0.5 * (loss_fn(logits1, y) + loss_fn(logits2, y))
-            # iter105: replace R-Drop's Bernoulli-KL on probs with MSE on
-            # logits. Smoother, scale-equivariant; avoids the saturating
-            # geometry of KL when probs are near 0/1.
+            eps = 1e-7
+            p1 = torch.sigmoid(logits1).clamp(eps, 1.0 - eps)
+            p2 = torch.sigmoid(logits2).clamp(eps, 1.0 - eps)
+            kl_12 = (p1 * (p1.log() - p2.log())
+                     + (1 - p1) * ((1 - p1).log() - (1 - p2).log())).mean()
+            kl_21 = (p2 * (p2.log() - p1.log())
+                     + (1 - p2) * ((1 - p2).log() - (1 - p1).log())).mean()
             rdrop_alpha = 1.0
-            consistency = (logits1 - logits2).pow(2).mean()
-            loss = bce_loss + rdrop_alpha * consistency
+            loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
             optimizer.step()
             with torch.no_grad():
