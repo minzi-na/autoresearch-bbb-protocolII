@@ -216,6 +216,10 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='max', factor=0.5, patience=3
+    )
+
     ema_decay = 0.82
     ema_state = None
 
@@ -282,6 +286,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             bad += 1
 
         model.load_state_dict(saved_state)
+        scheduler.step(val_auc)
         if bad >= patience:
             break
 
