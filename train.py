@@ -265,6 +265,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
+            # iter111: gradient clipping max_norm=1.0 on warmed R-Drop stack.
+            # iter21 failed pre-stack; R-Drop's KL term can blow gradients up
+            # especially during alpha warmup, so clipping should bound the
+            # update size and stabilize learning.
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             with torch.no_grad():
                 msd = model.state_dict()
