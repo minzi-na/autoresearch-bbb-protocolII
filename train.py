@@ -146,6 +146,9 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.mean_norm = nn.LayerNorm(d_model)
             self.max_norm = nn.LayerNorm(d_model)
             self.attn_norm = nn.LayerNorm(d_model)
+            self.attn_head_proj = nn.Linear(d_model, d_model)
+            nn.init.eye_(self.attn_head_proj.weight)
+            nn.init.zeros_(self.attn_head_proj.bias)
         self.head = nn.Linear(d_model, 1)
         self.drop = nn.Dropout(dropout)
         self.mod_drop_p = 0.075
@@ -172,6 +175,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             attn_scores = (X_h * self.pool_query.view(1, 1, H, -1)).sum(dim=-1) / ((D // H) ** 0.5)
             attn_w = torch.softmax(attn_scores, dim=1)
             attn_pool = (X_h * attn_w.unsqueeze(-1)).sum(dim=1).reshape(B, D)
+            attn_pool = self.attn_head_proj(attn_pool)
             gated = self.gated_norm(gated)
             mean = self.mean_norm(mean)
             max_pool = self.max_norm(max_pool)
