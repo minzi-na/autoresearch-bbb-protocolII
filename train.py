@@ -143,6 +143,8 @@ class CrossModalFiLM(nn.Module):
         emb_sum = emb_tokens.mean(1)
         gf, bf = self.embed_to_fp(emb_sum).chunk(2, dim=-1)
         ge, be = self.fp_to_embed(fp_sum).chunk(2, dim=-1)
+        gf = torch.tanh(gf)
+        ge = torch.tanh(ge)
         fp_norm  = self.ln(fp_tokens)
         emb_norm = self.ln(emb_tokens)
         Xn = X.clone()
