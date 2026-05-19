@@ -222,18 +222,23 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     ema_decay = 0.82
     ema_state = None
 
+    accum_steps = 2
+
     for epoch in range(num_epochs):
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
-        for x, y in train_loader:
+        optimizer.zero_grad()
+        n_batches = len(train_loader)
+        for i, (x, y) in enumerate(train_loader):
             x, y = x.to(device), y.to(device)
-            optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            loss = loss_fn(model(x), y) / accum_steps
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
-            tr_loss_sum += loss.item()
+            tr_loss_sum += loss.item() * accum_steps
             tr_batches  += 1
+            if (i + 1) % accum_steps == 0 or (i + 1) == n_batches:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
+                optimizer.zero_grad()
         train_loss = tr_loss_sum / max(tr_batches, 1)
 
         with torch.no_grad():
