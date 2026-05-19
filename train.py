@@ -78,7 +78,7 @@ class SpatialGatingUnit(nn.Module):
         super().__init__()
         assert d_ffn % n_heads == 0
         self.n_heads = n_heads
-        self.norm = nn.LayerNorm(d_ffn)
+        self.norm = nn.LayerNorm(d_ffn, elementwise_affine=False)
         self.spatial_projs = nn.ModuleList([
             nn.Conv1d(seq_len, seq_len, kernel_size=1) for _ in range(n_heads)
         ])
