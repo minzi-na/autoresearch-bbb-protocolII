@@ -153,6 +153,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             nn.Dropout(0.1),
             nn.Linear(d_model, d_model * 2),
             nn.SiLU(),
+            nn.Dropout(0.05),
             nn.Linear(d_model * 2, 1),
         )
         self.drop = nn.Dropout(dropout)
