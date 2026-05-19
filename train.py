@@ -130,8 +130,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
-        self.cls = nn.Parameter(torch.zeros(1, 1, d_model))
-        self.backbone = gMLP(seq_len=self.seq_len + 1, d_model=d_model,
+        self.backbone = gMLP(seq_len=self.seq_len, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
@@ -145,10 +144,15 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
-        cls = self.cls.expand(X.size(0), -1, -1)
-        X = torch.cat([cls, X], dim=1)
         X = self.backbone(X)
-        Xp = X[:, 0, :]
+        if self.use_gated_pool:
+            w = torch.softmax(self.alpha, dim=0)
+            Xp_gated = (X * w.view(1, -1, 1)).sum(dim=1)
+            Xp_mean = X.mean(dim=1)
+            g = torch.sigmoid(self.skip_gate)
+            Xp = g * Xp_gated + (1 - g) * Xp_mean
+        else:
+            Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
