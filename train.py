@@ -172,6 +172,8 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.film = CrossModalFiLM(d_model, fp_idx, emb_idx)
         self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
         nn.init.trunc_normal_(self.cls_token, std=0.02)
+        self.mod_emb = nn.Parameter(torch.zeros(self.seq_len, d_model))
+        nn.init.trunc_normal_(self.mod_emb, std=0.02)
         self.backbone = gMLP(seq_len=self.seq_len + 1, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model, elementwise_affine=False)
@@ -185,6 +187,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
+        X = X + self.mod_emb.unsqueeze(0)
         X = self.film(X)
         cls = self.cls_token.expand(X.size(0), -1, -1)
         X = torch.cat([cls, X], dim=1)
