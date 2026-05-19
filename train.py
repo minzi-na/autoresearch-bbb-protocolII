@@ -168,6 +168,14 @@ class MultiModalGMLPFromFlat(nn.Module):
         # so each channel can pick its own mix of gated vs mean. Init=0 still
         # gives 50/50 at start.
         self.pool_skip_gate = nn.Parameter(torch.zeros(d_model))
+        # iter121: channel-wise squeeze-excitation on the pooled vector.
+        # Multiplier = (1 + tanh(se_fc2(relu(se_fc1(Xp))))). Init: se_fc2=0 ->
+        # tanh(0)=0, multiplier=1 (identity at start). Lightweight ~33k params.
+        se_hidden = max(8, d_model // 16)
+        self.se_fc1 = nn.Linear(d_model, se_hidden)
+        self.se_fc2 = nn.Linear(se_hidden, d_model)
+        nn.init.zeros_(self.se_fc2.weight)
+        nn.init.zeros_(self.se_fc2.bias)
         self.head = nn.Linear(d_model, 1)
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
@@ -201,6 +209,9 @@ class MultiModalGMLPFromFlat(nn.Module):
             Xp = g * gated + (1.0 - g) * mean_pool
         else:
             Xp = X.mean(dim=1)
+        # iter121: channel-wise SE re-weighting before norm/drop.
+        se_mult = 1.0 + torch.tanh(self.se_fc2(F.relu(self.se_fc1(Xp))))
+        Xp = Xp * se_mult
         Xp = self.drop(self.norm(Xp))
         return self.head(Xp).squeeze(-1)
 
