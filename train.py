@@ -228,6 +228,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # without R-Drop; R-Drop adds reg, so the optimal explicit wd may shift
     # lower (similar to mod_drop / head dropout reductions in iter83/iter86).
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.005)
+    # iter120: cosine annealing LR schedule (T_max=num_epochs, eta_min=lr*0.01).
+    # iter54 failed pre-stack. With warmup R-Drop + skip-gate, smooth LR decay
+    # may give late-epoch fine-tuning headroom.
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=num_epochs, eta_min=lr * 0.01)
 
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
@@ -288,6 +293,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
+        scheduler.step()
 
         # Validate using EMA weights (swap in, then restore).
         online_state = deepcopy(model.state_dict())
