@@ -150,6 +150,15 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.drop = nn.Dropout(dropout)
         self.mod_drop_p = 0.05
 
+        _fp_set = {"maccs", "avalon"}
+        _emb_set = {"scage1", "scage2", "mole"}
+        self.fp_idx = [i for i, n in enumerate(self.mod_names) if n in _fp_set]
+        self.emb_idx = [i for i, n in enumerate(self.mod_names) if n in _emb_set]
+        self.film_e2f = nn.Linear(d_model, d_model * 2)
+        self.film_f2e = nn.Linear(d_model, d_model * 2)
+        nn.init.zeros_(self.film_e2f.weight); nn.init.zeros_(self.film_e2f.bias)
+        nn.init.zeros_(self.film_f2e.weight); nn.init.zeros_(self.film_f2e.bias)
+
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
         tokens = [self.proj[name](chunk)
@@ -159,6 +168,15 @@ class MultiModalGMLPFromFlat(nn.Module):
             mask = (torch.rand(X.size(0), self.seq_len, device=X.device)
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
+        if len(self.fp_idx) > 0 and len(self.emb_idx) > 0:
+            fp_sum  = X[:, self.fp_idx,  :].mean(dim=1)
+            emb_sum = X[:, self.emb_idx, :].mean(dim=1)
+            gf, bf = self.film_e2f(emb_sum).chunk(2, dim=-1)
+            ge, be = self.film_f2e(fp_sum).chunk(2, dim=-1)
+            X_film = X.clone()
+            X_film[:, self.fp_idx,  :] = (1 + gf.unsqueeze(1)) * X[:, self.fp_idx,  :] + bf.unsqueeze(1)
+            X_film[:, self.emb_idx, :] = (1 + ge.unsqueeze(1)) * X[:, self.emb_idx, :] + be.unsqueeze(1)
+            X = X_film
         X = self.backbone(X)
         if self.use_gated_pool:
             w = torch.softmax(self.alpha, dim=0)
