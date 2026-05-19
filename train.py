@@ -216,8 +216,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
-    ema_decay_max = 0.82
-    ema_warmup_epochs = 3
+    ema_decay = 0.82
     ema_state = None
 
     for epoch in range(num_epochs):
@@ -233,11 +232,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             tr_loss_sum += loss.item()
             tr_batches  += 1
         train_loss = tr_loss_sum / max(tr_batches, 1)
-
-        if epoch < ema_warmup_epochs:
-            ema_decay = 0.5 + (ema_decay_max - 0.5) * (epoch / ema_warmup_epochs)
-        else:
-            ema_decay = ema_decay_max
 
         with torch.no_grad():
             if ema_state is None:
