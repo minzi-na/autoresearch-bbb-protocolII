@@ -160,7 +160,10 @@ class MultiModalGMLPFromFlat(nn.Module):
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
-            self.alpha = nn.Parameter(torch.zeros(self.seq_len))
+            # iter128: per-channel-per-modality alpha (seq_len x d_model),
+            # softmax over modalities for each channel independently. Init=0
+            # gives uniform 1/seq_len weights, identical to baseline at start.
+            self.alpha = nn.Parameter(torch.zeros(self.seq_len, d_model))
         # iter114: sigmoid skip-gate between gated and mean pool. init=0 so
         # sigmoid(0)=0.5 => 50/50 mix at start; lets training shift toward
         # the better aggregation. iter7/iter43 failed pre-stack.
@@ -194,8 +197,9 @@ class MultiModalGMLPFromFlat(nn.Module):
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         if self.use_gated_pool:
+            # iter128: softmax over modalities (dim 0) -> (seq_len, d_model).
             w = torch.softmax(self.alpha, dim=0)
-            gated = (X * w.view(1, -1, 1)).sum(dim=1)
+            gated = (X * w.unsqueeze(0)).sum(dim=1)
             mean_pool = X.mean(dim=1)
             g = torch.sigmoid(self.pool_skip_gate)
             Xp = g * gated + (1.0 - g) * mean_pool
