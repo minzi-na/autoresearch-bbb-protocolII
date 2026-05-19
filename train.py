@@ -147,7 +147,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.max_norm = nn.LayerNorm(d_model)
             self.attn_norm = nn.LayerNorm(d_model)
             self.attn_head_proj = nn.Linear(d_model, d_model)
-            nn.init.eye_(self.attn_head_proj.weight)
+            nn.init.xavier_uniform_(self.attn_head_proj.weight)
             nn.init.zeros_(self.attn_head_proj.bias)
         self.head = nn.Sequential(
             nn.Dropout(0.08),
