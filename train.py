@@ -211,6 +211,12 @@ class MultiModalGMLPFromFlat(nn.Module):
 
 def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc"):
+    # iter123: BCEWithLogitsLoss pos_weight=0.7 on warmed R-Drop+skipgate
+    # stack. iter3 used 0.44 (n_neg/n_pos exactly) and failed; 0.7 is a
+    # gentler partial correction. Override the passed-in loss_fn since the
+    # frozen public API constructs vanilla BCE.
+    loss_fn = nn.BCEWithLogitsLoss(
+        pos_weight=torch.tensor(0.7, device=device))
     if es_metric == "val_loss":
         best_score = float("inf")
         is_better  = lambda new, cur: new < cur
