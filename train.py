@@ -103,7 +103,7 @@ class gMLPBlock(nn.Module):
         if self.training and self.drop_path > 0 and torch.rand(1).item() < self.drop_path:
             return residual
         x = self.norm(x)
-        x = F.gelu(self.channel_proj1(x))
+        x = F.silu(self.channel_proj1(x))
         x = self.sgu(x)
         x = self.channel_proj2(x)
         return x + residual
