@@ -186,7 +186,10 @@ class MultiModalGMLPFromFlat(nn.Module):
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
-        X = X * self.proj_scale.view(1, self.seq_len, 1)
+        # iter142: ablate iter20's proj_scale (skip its application). iter51's
+        # ablation failed pre-R-Drop+skipgate; the gain may now come from the
+        # downstream gates, making per-modality scale redundant.
+        _ = self.proj_scale
         if self.training and self.mod_drop_p > 0:
             B = X.size(0)
             mask = (torch.rand(B, self.seq_len, device=X.device)
