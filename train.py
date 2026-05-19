@@ -84,7 +84,7 @@ class SpatialGatingUnit(nn.Module):
         ])
         for proj in self.spatial_projs:
             nn.init.constant_(proj.bias, 1.0)
-        self.gate_scale = nn.Parameter(torch.zeros(1))
+        self.gate_scale = nn.Parameter(torch.full((1,), -0.5))
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
