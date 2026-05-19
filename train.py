@@ -214,7 +214,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     bad = 0
     epoch_log = []
 
-    patience = 15
+    patience = 20
 
     for param_group in optimizer.param_groups:
         param_group['weight_decay'] = 1e-6
