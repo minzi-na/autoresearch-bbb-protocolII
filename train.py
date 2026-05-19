@@ -216,7 +216,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 15
 
-    ema_decay = 0.82
+    ema_decay = 0.825
     ema_state = None
 
     for epoch in range(num_epochs):
