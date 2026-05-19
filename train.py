@@ -154,6 +154,8 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.mod_drop_p = 0.075
 
     def forward(self, x):
+        if self.training:
+            x = F.dropout(x, p=0.05, training=True)
         chunks = torch.split(x, self.mod_dims, dim=1)
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
