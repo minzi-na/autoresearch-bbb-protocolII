@@ -174,7 +174,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         nn.init.trunc_normal_(self.cls_token, std=0.02)
         self.backbone = gMLP(seq_len=self.seq_len + 1, d_model=d_model,
                              d_ffn=d_ffn, num_layers=depth)
-        self.norm = nn.LayerNorm(d_model, elementwise_affine=False)
+        self.norm = nn.RMSNorm(d_model, elementwise_affine=False)
         if use_gated_pool:
             self.pool_queries = nn.Parameter(torch.zeros(2, d_model))
         self.head = nn.Linear(d_model, 1)
