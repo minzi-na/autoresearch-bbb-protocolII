@@ -84,8 +84,7 @@ class SpatialGatingUnit(nn.Module):
     # to `u` alone — bypassing spatial mixing. Train-time only.
     # iter93: fine sweep 0.10 -> 0.08 on R-Drop stack (iter64 was 0.08 without
     # R-Drop, failed; iter85 was 0.05 with R-Drop, failed).
-    # iter152: DROP_V_PATH 0.08 -> 0.09 (sweep up post proj_scale+wd ablations).
-    DROP_V_PATH = 0.09
+    DROP_V_PATH = 0.08
 
     def __init__(self, d_ffn, seq_len):
         super().__init__()
