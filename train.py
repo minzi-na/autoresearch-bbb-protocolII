@@ -172,7 +172,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
         # for the reduced explicit head dropout.
-        self.drop = nn.Dropout(0.12)
+        self.drop = nn.Dropout(0.10)
         # iter6: per-sample modality token dropout (zero a whole modality
         # token with prob p) — encourages cross-modal redundancy / prevents
         # single-modality overfit. Active in training only.
