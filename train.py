@@ -141,7 +141,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             self.alpha = nn.Parameter(torch.zeros(self.seq_len))
             self.n_attn_heads = 2
             self.pool_query = nn.Parameter(torch.zeros(self.n_attn_heads, d_model // self.n_attn_heads))
-            self.pool_logits = nn.Parameter(torch.tensor([0.0, 0.0, 0.0, 0.5]))
+            self.pool_logits = nn.Parameter(torch.tensor([0.0, 0.0, 0.0, 0.7]))
             self.gated_norm = nn.LayerNorm(d_model)
             self.mean_norm = nn.LayerNorm(d_model)
             self.max_norm = nn.LayerNorm(d_model)
