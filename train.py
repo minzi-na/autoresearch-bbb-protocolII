@@ -181,12 +181,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.drop = nn.Dropout(dropout)
 
     def forward(self, x):
-        chunks = list(torch.split(x, self.mod_dims, dim=1))
-        if self.training and "maccs" in self.mod_names:
-            mi = self.mod_names.index("maccs")
-            c = chunks[mi]
-            mask = (torch.rand_like(c) < 0.02).to(c.dtype)
-            chunks[mi] = torch.abs(c - mask)
+        chunks = torch.split(x, self.mod_dims, dim=1)
         tokens = [self.proj[name](chunk)
                   for name, chunk in zip(self.mod_names, chunks)]
         X = torch.stack(tokens, dim=1)
