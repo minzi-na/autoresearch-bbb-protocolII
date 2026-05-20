@@ -97,6 +97,10 @@ class SpatialGatingUnit(nn.Module):
         ])
         for proj in self.spatial_proj:
             nn.init.constant_(proj.bias, 1.0)
+            # iter186: small init on Conv1d weights so v_out starts close to
+            # the bias=1.0 baseline (near-identity SGU early in training).
+            # Default Kaiming gives std ~0.5 for fan_in=4; reduce 25x.
+            nn.init.normal_(proj.weight, std=0.02)
 
     def forward(self, x):
         u, v = x.chunk(2, dim=-1)
