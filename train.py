@@ -264,7 +264,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # improvements, so the optimum may have shifted.
     ema_decay = 0.9995
     # iter30: sweep warmup further down to 1 epoch.
-    ema_warmup_epochs = 1
+    ema_warmup_epochs = 0
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     best_state = None
