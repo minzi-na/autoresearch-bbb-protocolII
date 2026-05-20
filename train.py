@@ -244,7 +244,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                     if k.startswith('head.'):
                         decay = 0.2
                     elif k == 'cls_token':
-                        decay = 0.1
+                        decay = 0.3
                     else:
                         decay = ema_decay
                     if v.dtype.is_floating_point:
