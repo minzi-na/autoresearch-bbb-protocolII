@@ -168,16 +168,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         # so each channel can pick its own mix of gated vs mean. Init=0 still
         # gives 50/50 at start.
         self.pool_skip_gate = nn.Parameter(torch.zeros(d_model))
-        # iter168: 2-layer MLP head (Linear-GELU-Dropout-Linear, hidden=d/2).
-        # iter44 failed pre-R-Drop/EMA-warmup-1/skip-gate; retry on the iter148
-        # stack which is much more regularized — the added capacity may now
-        # have a fighting chance without immediately overfitting.
-        self.head = nn.Sequential(
-            nn.Linear(d_model, d_model // 2),
-            nn.GELU(),
-            nn.Dropout(0.10),
-            nn.Linear(d_model // 2, 1),
-        )
+        self.head = nn.Linear(d_model, 1)
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
         # for the reduced explicit head dropout.
