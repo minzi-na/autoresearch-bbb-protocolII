@@ -216,8 +216,12 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     patience = 25
 
-    for param_group in optimizer.param_groups:
-        param_group['weight_decay'] = 1e-6
+    head_params = [p for n, p in model.named_parameters() if n.startswith('head.')]
+    rest_params = [p for n, p in model.named_parameters() if not n.startswith('head.')]
+    optimizer = optim.Adam([
+        {'params': rest_params, 'lr': BASE_CONFIG["lr"], 'weight_decay': 1e-6},
+        {'params': head_params, 'lr': BASE_CONFIG["lr"] * 2.0, 'weight_decay': 1e-6},
+    ])
 
     ema_decay = 0.82
     ema_state = None
