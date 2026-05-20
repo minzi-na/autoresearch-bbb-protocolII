@@ -107,10 +107,7 @@ class SpatialGatingUnit(nn.Module):
             dim=-1,
         )
         if self.training and self.DROP_V_PATH > 0:
-            # iter161: per-token DROP_V_PATH (B, seq_len, 1) instead of
-            # per-sample (B, 1, 1). Finer-grained — each modality token
-            # independently bypasses spatial mixing with prob DROP_V_PATH.
-            keep = (torch.rand(x.size(0), x.size(1), 1, device=x.device)
+            keep = (torch.rand(x.size(0), 1, 1, device=x.device)
                     >= self.DROP_V_PATH).float()
             v_out = keep * v_out + (1.0 - keep)
         return u * v_out
