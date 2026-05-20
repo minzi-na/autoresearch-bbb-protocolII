@@ -138,10 +138,13 @@ class MultiModalGMLPFromFlat(nn.Module):
         self.final_norm = nn.LayerNorm(d_model)
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
+            self.alpha = nn.Parameter(torch.zeros(self.seq_len))
             self.n_attn_heads = 2
             self.pool_query = nn.Parameter(torch.zeros(self.n_attn_heads, d_model // self.n_attn_heads))
-            self.pool_logits = nn.Parameter(torch.tensor([0.0, 0.7]))
+            self.pool_logits = nn.Parameter(torch.tensor([0.0, 0.0, 0.0, 0.7]))
+            self.gated_norm = nn.LayerNorm(d_model)
             self.mean_norm = nn.LayerNorm(d_model)
+            self.max_norm = nn.LayerNorm(d_model)
             self.attn_norm = nn.LayerNorm(d_model)
             self.attn_head_proj = nn.Linear(d_model, d_model)
             nn.init.eye_(self.attn_head_proj.weight)
@@ -167,18 +170,23 @@ class MultiModalGMLPFromFlat(nn.Module):
         X = self.backbone(X)
         X = self.final_norm(X)
         if self.use_gated_pool:
+            w = torch.softmax(self.alpha, dim=0)
+            gated = (X * w.view(1, -1, 1)).sum(dim=1)
             mean = X.mean(dim=1)
+            max_pool = X.max(dim=1).values
             B, L, D = X.shape
             H = self.n_attn_heads
             X_h = X.view(B, L, H, D // H)
             attn_scores = (X_h * self.pool_query.view(1, 1, H, -1)).sum(dim=-1) / ((D // H) ** 0.5)
             attn_w = torch.softmax(attn_scores, dim=1)
             attn_pool = (X_h * attn_w.unsqueeze(-1)).sum(dim=1).reshape(B, D)
+            gated = self.gated_norm(gated)
             mean = self.mean_norm(mean)
+            max_pool = self.max_norm(max_pool)
             attn_pool = self.attn_norm(attn_pool)
             attn_pool = self.attn_head_proj(attn_pool)
             pw = torch.softmax(self.pool_logits, dim=0)
-            Xp = pw[0] * mean + pw[1] * attn_pool
+            Xp = pw[0] * gated + pw[1] * mean + pw[2] * max_pool + pw[3] * attn_pool
         else:
             Xp = X.mean(dim=1)
         Xp = self.drop(self.norm(Xp))
