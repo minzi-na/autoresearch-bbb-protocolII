@@ -253,14 +253,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     epoch_log = []
 
     for epoch in range(num_epochs):
-        # iter170: anneal mod_drop_p from 0.15 (epoch 0) down to 0.05 (final).
-        # Strong regularization early when the model can latch onto any
-        # single-modality shortcut; weaken late so the well-mixed cross-modal
-        # representation is preserved during fine convergence. iter132 (warmup
-        # 0->0.10) failed; reverse direction untried.
-        p_high, p_low = 0.15, 0.05
-        frac = epoch / max(1, num_epochs - 1)
-        model.mod_drop_p = p_high + (p_low - p_high) * frac
         model.train()
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
