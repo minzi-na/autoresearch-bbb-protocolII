@@ -126,6 +126,10 @@ class gMLPBlock(nn.Module):
         x = self.norm(x)
         x = F.gelu(self.channel_proj1(x))
         x = self.sgu(x)
+        # iter164: post-SGU dropout — drop d_ffn units after spatial mixing,
+        # before channel_proj2 contracts back to d_model. Different from
+        # DROP_V_PATH (per-sample SGU v bypass) and head dropout (post-pool).
+        x = F.dropout(x, p=0.05, training=self.training)
         x = self.channel_proj2(x)
         return x + residual
 
