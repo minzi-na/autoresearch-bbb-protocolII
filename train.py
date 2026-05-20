@@ -196,6 +196,11 @@ class MultiModalGMLPFromFlat(nn.Module):
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
+        # iter166: apply per-token LayerNorm BEFORE pooling instead of after.
+        # Normalizes each modality token to comparable scale before the
+        # weighted sum, which should reduce the dominance of any single
+        # high-magnitude token in the pooled vector.
+        X = self.norm(X)
         if self.use_gated_pool:
             w = torch.softmax(self.alpha, dim=0)
             gated = (X * w.view(1, -1, 1)).sum(dim=1)
@@ -204,7 +209,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             Xp = g * gated + (1.0 - g) * mean_pool
         else:
             Xp = X.mean(dim=1)
-        Xp = self.drop(self.norm(Xp))
+        Xp = self.drop(Xp)
         return self.head(Xp).squeeze(-1)
 
 
