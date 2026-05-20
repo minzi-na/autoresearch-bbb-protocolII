@@ -269,15 +269,20 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             eps = 1e-7
             p1 = torch.sigmoid(logits1).clamp(eps, 1.0 - eps)
             p2 = torch.sigmoid(logits2).clamp(eps, 1.0 - eps)
-            kl_12 = (p1 * (p1.log() - p2.log())
-                     + (1 - p1) * ((1 - p1).log() - (1 - p2).log())).mean()
-            kl_21 = (p2 * (p2.log() - p1.log())
-                     + (1 - p2) * ((1 - p2).log() - (1 - p1).log())).mean()
+            # iter160: replace symmetric Bernoulli-KL with JSD-like (KL to
+            # mixture). JSD is bounded by log(2), unlike symmetric KL which
+            # blows up when p1 and p2 diverge. Should give a more stable
+            # consistency signal late in training when probs are confident.
+            m = 0.5 * (p1 + p2)
+            kl_1m = (p1 * (p1.log() - m.log())
+                     + (1 - p1) * ((1 - p1).log() - (1 - m).log())).mean()
+            kl_2m = (p2 * (p2.log() - m.log())
+                     + (1 - p2) * ((1 - p2).log() - (1 - m).log())).mean()
             # iter106: warmup R-Drop alpha 0 -> 1.0 over first 5 epochs (linear).
             # Defer consistency penalty until model has learned useful features,
             # avoiding penalizing noise-driven predictions in epoch 0-1.
             rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
-            loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
+            loss = bce_loss + rdrop_alpha * 0.5 * (kl_1m + kl_2m)
             loss.backward()
             optimizer.step()
             with torch.no_grad():
