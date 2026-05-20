@@ -241,7 +241,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
             else:
                 for k, v in model.state_dict().items():
-                    decay = 0.6 if k.startswith('head.') else ema_decay
+                    decay = 0.5 if k.startswith('head.') else ema_decay
                     if v.dtype.is_floating_point:
                         ema_state[k].mul_(decay).add_(v.detach(), alpha=1.0 - decay)
                     else:
