@@ -166,6 +166,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         if self.training and self.mod_drop_p > 0:
             B = X.shape[0]
             mask = (torch.rand(B, self.seq_len, device=X.device) > self.mod_drop_p).float()
+            mask = mask / (1.0 - self.mod_drop_p)
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         X = self.final_norm(X)
