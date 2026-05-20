@@ -190,12 +190,17 @@ class MultiModalGMLPFromFlat(nn.Module):
         # ablation failed pre-R-Drop+skipgate; the gain may now come from the
         # downstream gates, making per-modality scale redundant.
         _ = self.proj_scale
+        X = self.backbone(X)
+        # iter169: move mod_drop from pre-backbone to post-backbone. Backbone
+        # still sees all modalities, but pool randomly drops one token's
+        # contribution — pure aggregation-side regularization. Pre-backbone
+        # mod_drop also masks during SGU's spatial mix, which may starve the
+        # mixer; post-backbone keeps the mixer fully fed.
         if self.training and self.mod_drop_p > 0:
             B = X.size(0)
             mask = (torch.rand(B, self.seq_len, device=X.device)
                     > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
-        X = self.backbone(X)
         if self.use_gated_pool:
             w = torch.softmax(self.alpha, dim=0)
             gated = (X * w.view(1, -1, 1)).sum(dim=1)
