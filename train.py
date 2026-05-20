@@ -245,8 +245,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                         decay = 0.2
                     elif k == 'cls_token':
                         decay = 0.3
-                    elif 'sgu.gate_scale' in k:
-                        decay = 0.5
                     else:
                         decay = ema_decay
                     if v.dtype.is_floating_point:
