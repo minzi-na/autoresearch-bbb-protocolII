@@ -218,12 +218,9 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     for param_group in optimizer.param_groups:
         param_group['weight_decay'] = 1e-6
-        param_group['amsgrad'] = True
 
     ema_decay = 0.82
     ema_state = None
-    top_k = 2
-    top_states = []
 
     for epoch in range(num_epochs):
         model.train()
@@ -287,34 +284,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         else:
             bad += 1
 
-        cur_state_clone = {k: v.detach().clone() for k, v in ema_state.items()}
-        top_states.append((score, cur_state_clone))
-        reverse = (es_metric == "val_auc")
-        top_states.sort(key=lambda t: t[0], reverse=reverse)
-        top_states = top_states[:top_k]
-
         model.load_state_dict(saved_state)
         if bad >= patience:
             break
 
-    if top_states:
-        avg_state = None
-        keys = list(top_states[0][1].keys())
-        for _, st in top_states:
-            if avg_state is None:
-                avg_state = {k: (st[k].float().clone() if st[k].dtype.is_floating_point else st[k].clone())
-                             for k in keys}
-            else:
-                for k in keys:
-                    if avg_state[k].dtype.is_floating_point:
-                        avg_state[k].add_(st[k].float())
-        n = len(top_states)
-        for k in keys:
-            if avg_state[k].dtype.is_floating_point:
-                avg_state[k].div_(n)
-                avg_state[k] = avg_state[k].to(top_states[0][1][k].dtype)
-        model.load_state_dict(avg_state)
-    elif best_state is not None:
+    if best_state is not None:
         model.load_state_dict(best_state)
 
     return model, {
