@@ -224,7 +224,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             optimizer.zero_grad()
             loss = loss_fn(model(x), y)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
             optimizer.step()
             with torch.no_grad():
                 for k, v in model.state_dict().items():
