@@ -160,7 +160,14 @@ class MultiModalGMLPFromFlat(nn.Module):
                              d_ffn=d_ffn, num_layers=depth)
         self.norm = nn.LayerNorm(d_model)
         if use_gated_pool:
-            self.alpha = nn.Parameter(torch.zeros(self.seq_len))
+            # iter171: bias alpha init toward embed tokens (latter half) so the
+            # gated pool starts weighting pretrained embeddings ~30% each and
+            # fp tokens ~20% each (instead of uniform 25/25/25/25). Embed
+            # tokens carry denser per-token info — letting them speak louder
+            # at init may accelerate convergence past the current plateau.
+            a_init = torch.zeros(self.seq_len)
+            a_init[self.seq_len // 2:] = 0.5
+            self.alpha = nn.Parameter(a_init)
         # iter114: sigmoid skip-gate between gated and mean pool. init=0 so
         # sigmoid(0)=0.5 => 50/50 mix at start; lets training shift toward
         # the better aggregation. iter7/iter43 failed pre-stack.
