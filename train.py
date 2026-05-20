@@ -15,6 +15,7 @@ Do NOT edit:
   - device handling
 """
 
+import math
 import random
 from copy import deepcopy
 from collections import OrderedDict
@@ -233,6 +234,18 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # iter148: AdamW wd 0.005 -> 0.003 (sweep down post proj_scale ablation).
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.003)
 
+    # iter165: warmup(3 epochs) + cosine annealing to lr*0.1 on current best
+    # stack. Cosine alone failed (iter54, iter120) and AdamW+clip+warmup+cosine
+    # failed (iter2) on baseline stack; pair never tested on tuned R-Drop +
+    # EMA stack. Min lr=lr*0.1 keeps late-training steps non-trivial.
+    warmup_epochs = 3
+    def lr_lambda(epoch):
+        if epoch < warmup_epochs:
+            return (epoch + 1) / warmup_epochs
+        p = (epoch - warmup_epochs) / max(1, num_epochs - warmup_epochs)
+        return 0.5 * (1 + math.cos(math.pi * p)) * 0.9 + 0.1
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
     # iter27: warmup the EMA — during the first ema_warmup_epochs epochs,
@@ -291,6 +304,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                         ema_state[k].copy_(msd[k])
             tr_loss_sum += loss.item()
             tr_batches  += 1
+        scheduler.step()
         train_loss = tr_loss_sum / max(tr_batches, 1)
 
         # Validate using EMA weights (swap in, then restore).
