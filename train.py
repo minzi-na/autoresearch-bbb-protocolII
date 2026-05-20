@@ -251,7 +251,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
         lr=lr,
-        betas=(0.9, 0.95),
     )
 
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
