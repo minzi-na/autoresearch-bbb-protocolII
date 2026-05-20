@@ -249,13 +249,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
     best_state = None
     best_epoch = -1
-    # iter167: top-2 EMA snapshot averaging — keep the runner-up EMA snapshot
-    # alongside the best, and at the end blend them 50/50. If the top-2
-    # snapshots are nearby in val_auc, the blend reduces seed/epoch variance.
-    # Prior K=2/3 averaging (iter71, iter98) failed on different stacks; never
-    # tested at the iter148 wd=0.003 + proj_scale ablation stack.
-    second_state = None
-    second_score = float("-inf")
     bad = 0
     epoch_log = []
 
@@ -332,30 +325,16 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
 
         score = val_auc if es_metric == "val_auc" else val_loss
         if is_better(score, best_score):
-            # demote current best to second
-            second_state = best_state
-            second_score = best_score
             best_score = score
             best_state = deepcopy(ema_state)
             best_epoch = epoch
             bad = 0
         else:
-            if is_better(score, second_score):
-                second_score = score
-                second_state = deepcopy(ema_state)
             bad += 1
             if bad >= patience:
                 break
 
-    if best_state is not None and second_state is not None:
-        blended = {}
-        for k in best_state:
-            if best_state[k].dtype.is_floating_point:
-                blended[k] = 0.5 * best_state[k] + 0.5 * second_state[k]
-            else:
-                blended[k] = best_state[k]
-        model.load_state_dict(blended)
-    elif best_state is not None:
+    if best_state is not None:
         model.load_state_dict(best_state)
 
     return model, {
