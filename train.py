@@ -226,7 +226,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # iter38: replace the passed-in Adam (wd=1e-5 ~ effectively 0) with AdamW
     # using decoupled wd=0.01 — a real weight-decay regularizer to complement
     # EMA / DropPath / mod_drop, with the same lr as before.
-    lr = optimizer.param_groups[0]["lr"]
+    lr = optimizer.param_groups[0]["lr"] * 1.5
     # iter88: AdamW wd 0.01 -> 0.005 on R-Drop stack. iter40 was a failure
     # without R-Drop; R-Drop adds reg, so the optimal explicit wd may shift
     # lower (similar to mod_drop / head dropout reductions in iter83/iter86).
