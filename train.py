@@ -78,7 +78,7 @@ class SpatialGatingUnit(nn.Module):
     # disjoint groups, each with its own seq_len×seq_len spatial mixer.
     # d_ffn=1048 is divisible by 2 (524) and 4 (262); 2 is the conservative
     # choice given seq_len=4 (per-head mixer is still small).
-    SGU_N_HEADS = 1
+    SGU_N_HEADS = 2
     # iter22: per-sample DropPath on the v-mixing path. When dropped,
     # v_out is replaced by 1.0 (identity multiplier), so SGU output collapses
     # to `u` alone — bypassing spatial mixing. Train-time only.
