@@ -231,7 +231,27 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # without R-Drop; R-Drop adds reg, so the optimal explicit wd may shift
     # lower (similar to mod_drop / head dropout reductions in iter83/iter86).
     # iter148: AdamW wd 0.005 -> 0.003 (sweep down post proj_scale ablation).
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.003)
+    # iter172: split parameters into decay / no-decay groups (standard
+    # transformer convention). Norms, biases, and small learnable scalars
+    # (alpha, pool_skip_gate, proj_scale) skip wd; matrices keep wd=0.003.
+    # iter58 tried a similar split pre-R-Drop, failed; retry on iter148 stack.
+    decay_params, no_decay_params = [], []
+    for n, p in model.named_parameters():
+        if not p.requires_grad:
+            continue
+        if p.ndim <= 1 or "norm" in n.lower() or n in (
+            "alpha", "pool_skip_gate", "proj_scale"
+        ):
+            no_decay_params.append(p)
+        else:
+            decay_params.append(p)
+    optimizer = optim.AdamW(
+        [
+            {"params": decay_params, "weight_decay": 0.003},
+            {"params": no_decay_params, "weight_decay": 0.0},
+        ],
+        lr=lr,
+    )
 
     # iter17: EMA of weights — validate and snapshot ES from the EMA copy;
     # training keeps running on the online weights.
