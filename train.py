@@ -180,11 +180,6 @@ class MultiModalGMLPFromFlat(nn.Module):
         # consistency-based regularization; reducing explicit token-zero
         # noise may free up signal that R-Drop is already protecting.
         self.mod_drop_p = 0.10
-        # iter162: drop only fp (bit-vector) modalities. Pretrained embeddings
-        # (scage1/scage2/mole) carry denser per-token information; dropping
-        # them throws away more signal than is regained in regularization.
-        FP_MODS = {"maccs", "avalon", "ecfp", "rdkit", "tt"}
-        self.fp_indices = [i for i, n in enumerate(self.mod_names) if n in FP_MODS]
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
@@ -195,13 +190,10 @@ class MultiModalGMLPFromFlat(nn.Module):
         # ablation failed pre-R-Drop+skipgate; the gain may now come from the
         # downstream gates, making per-modality scale redundant.
         _ = self.proj_scale
-        if self.training and self.mod_drop_p > 0 and len(self.fp_indices) > 0:
+        if self.training and self.mod_drop_p > 0:
             B = X.size(0)
-            n_fp = len(self.fp_indices)
-            mask = torch.ones(B, self.seq_len, device=X.device)
-            fp_keep = (torch.rand(B, n_fp, device=X.device)
-                       > self.mod_drop_p).float()
-            mask[:, self.fp_indices] = fp_keep
+            mask = (torch.rand(B, self.seq_len, device=X.device)
+                    > self.mod_drop_p).float()
             X = X * mask.unsqueeze(-1)
         X = self.backbone(X)
         if self.use_gated_pool:
