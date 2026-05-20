@@ -133,12 +133,22 @@ class gMLPBlock(nn.Module):
 class gMLP(nn.Module):
     def __init__(self, d_model=256, d_ffn=512, seq_len=256, num_layers=6):
         super().__init__()
-        self.model = nn.Sequential(
-            *[gMLPBlock(d_model, d_ffn, seq_len) for _ in range(num_layers)]
+        self.blocks = nn.ModuleList(
+            [gMLPBlock(d_model, d_ffn, seq_len) for _ in range(num_layers)]
         )
+        # iter190: linearly ramped stochastic depth per block. Drop probability
+        # grows with depth: layer 0 stays, deeper layers more likely to skip.
+        # max 0.05 at last layer (depth=4 → [0.0125, 0.025, 0.0375, 0.05]).
+        # Prior flat-p variants failed (iter15/75/109); ramp form untried.
+        max_dp = 0.05
+        self.drop_paths = [(l + 1) / num_layers * max_dp for l in range(num_layers)]
 
     def forward(self, x):
-        return self.model(x)
+        for block, dp in zip(self.blocks, self.drop_paths):
+            if self.training and dp > 0 and torch.rand(1).item() < dp:
+                continue
+            x = block(x)
+        return x
 
 
 class MultiModalGMLPFromFlat(nn.Module):
