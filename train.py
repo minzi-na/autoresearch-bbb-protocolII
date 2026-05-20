@@ -299,10 +299,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
-            # iter187: gradient clipping max_norm=2.0 — loose enough to allow
-            # most steps unchanged but caps the occasional R-Drop-induced
-            # spike. iter111 used 1.0 (failed on prev stack); 2.0 is gentler.
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
             optimizer.step()
             with torch.no_grad():
                 msd = model.state_dict()
