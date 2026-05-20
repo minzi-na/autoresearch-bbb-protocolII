@@ -247,7 +247,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             decay_params.append(p)
     optimizer = optim.AdamW(
         [
-            {"params": decay_params, "weight_decay": 0.003},
+            {"params": decay_params, "weight_decay": 0.005},
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
         lr=lr,
