@@ -167,6 +167,9 @@ class MultiModalGMLPFromFlat(nn.Module):
             name: nn.Linear(in_dim, d_model)
             for name, in_dim in zip(self.mod_names, self.mod_dims)
         })
+        for _l in self.proj.values():
+            nn.init.xavier_uniform_(_l.weight)
+            nn.init.zeros_(_l.bias)
         fp_idx  = [i for i, n in enumerate(self.mod_names) if n in _FP_MODS]
         emb_idx = [i for i, n in enumerate(self.mod_names) if n not in _FP_MODS]
         self.film = CrossModalFiLM(d_model, fp_idx, emb_idx)
