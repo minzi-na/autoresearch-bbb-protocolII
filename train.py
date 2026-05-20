@@ -279,14 +279,6 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
-            # iter163: gradient noise injection (Neelakantan et al. 2015) —
-            # add small Gaussian noise to gradients before the AdamW step.
-            # Smooths the loss landscape, often boosts generalization on small
-            # datasets. Untried on this stack.
-            with torch.no_grad():
-                for p in model.parameters():
-                    if p.grad is not None:
-                        p.grad.add_(torch.randn_like(p.grad) * 1e-4)
             optimizer.step()
             with torch.no_grad():
                 msd = model.state_dict()
