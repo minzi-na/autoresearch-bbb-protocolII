@@ -167,7 +167,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         # iter116: upgrade scalar skip-gate to per-feature (d_model gates),
         # so each channel can pick its own mix of gated vs mean. Init=0 still
         # gives 50/50 at start.
-        self.pool_skip_gate = nn.Parameter(torch.zeros(1))
+        self.pool_skip_gate = nn.Parameter(torch.zeros(d_model))
         self.head = nn.Linear(d_model, 1)
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
