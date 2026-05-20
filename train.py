@@ -93,6 +93,7 @@ class SpatialGatingUnit(nn.Module):
         v_mixed = torch.cat([proj(c) for proj, c in zip(self.spatial_projs, v_chunks)], dim=-1)
         g = self.gate_scale.exp()
         v_out = g * v_mixed + (1.0 - g) * v_normed
+        v_out = F.dropout(v_out, p=0.05, training=self.training)
         return u * v_out
 
 
