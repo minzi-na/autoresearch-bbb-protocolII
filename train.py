@@ -189,7 +189,7 @@ class MultiModalGMLPFromFlat(nn.Module):
             Xp = pw[0] * gated + pw[1] * mean + pw[2] * max_pool + pw[3] * attn_pool
         else:
             Xp = X.mean(dim=1)
-        Xp = self.drop(self.norm(Xp))
+        Xp = self.drop(Xp)
         return self.head(Xp).squeeze(-1)
 
 
