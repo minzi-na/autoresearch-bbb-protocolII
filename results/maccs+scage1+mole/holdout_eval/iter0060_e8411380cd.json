@@ -1,0 +1,773 @@
+{
+  "summary": {
+    "iter": 60,
+    "commit": "e8411380cd",
+    "combo": "maccs+scage1+mole",
+    "note": "quad-pool gated+mean+max+attention",
+    "timestamp": "2026-05-18T07:07:35",
+    "n_seeds": 10,
+    "wall_time_min": 7.03,
+    "val": {
+      "aggregation": "per_seed_mean_std",
+      "mean_roc_auc": 0.849649,
+      "std_roc_auc": 0.003923,
+      "mean_mcc": 0.536024,
+      "std_mcc": 0.009171
+    },
+    "subsets": {
+      "aggregation": "soft_voting_ensemble",
+      "internal": {
+        "ensemble": {
+          "accuracy": 0.893855,
+          "precision": 0.909091,
+          "recall": 0.955882,
+          "f1": 0.9319,
+          "roc_auc": 0.892442,
+          "mcc": 0.696575,
+          "auprc": 0.939709,
+          "specificity": 0.697674
+        },
+        "per_seed_mean_roc_auc": 0.89151,
+        "per_seed_std_roc_auc": 0.005974,
+        "per_seed_mean_mcc": 0.698815,
+        "per_seed_std_mcc": 0.031287,
+        "per_seed_mean_auprc": 0.940746,
+        "per_seed_std_auprc": 0.006007
+      },
+      "external": {
+        "ensemble": {
+          "accuracy": 0.836389,
+          "precision": 0.864564,
+          "recall": 0.915521,
+          "f1": 0.889313,
+          "roc_auc": 0.878625,
+          "mcc": 0.580268,
+          "auprc": 0.936412,
+          "specificity": 0.635
+        },
+        "per_seed_mean_roc_auc": 0.872245,
+        "per_seed_std_roc_auc": 0.004294,
+        "per_seed_mean_mcc": 0.578768,
+        "per_seed_std_mcc": 0.014953,
+        "per_seed_mean_auprc": 0.932228,
+        "per_seed_std_auprc": 0.002876
+      },
+      "nn03": {
+        "ensemble": {
+          "accuracy": 0.794872,
+          "precision": 0.833333,
+          "recall": 0.892857,
+          "f1": 0.862069,
+          "roc_auc": 0.87013,
+          "mcc": 0.468141,
+          "auprc": 0.931895,
+          "specificity": 0.545455
+        },
+        "per_seed_mean_roc_auc": 0.862662,
+        "per_seed_std_roc_auc": 0.025401,
+        "per_seed_mean_mcc": 0.533711,
+        "per_seed_std_mcc": 0.107893,
+        "per_seed_mean_auprc": 0.923865,
+        "per_seed_std_auprc": 0.019743
+      },
+      "nn05": {
+        "ensemble": {
+          "accuracy": 0.854103,
+          "precision": 0.895131,
+          "recall": 0.92278,
+          "f1": 0.908745,
+          "roc_auc": 0.878544,
+          "mcc": 0.5471,
+          "auprc": 0.947529,
+          "specificity": 0.6
+        },
+        "per_seed_mean_roc_auc": 0.871793,
+        "per_seed_std_roc_auc": 0.005967,
+        "per_seed_mean_mcc": 0.56144,
+        "per_seed_std_mcc": 0.02263,
+        "per_seed_mean_auprc": 0.944916,
+        "per_seed_std_auprc": 0.003957
+      },
+      "total": {
+        "ensemble": {
+          "accuracy": 0.847973,
+          "precision": 0.8739,
+          "recall": 0.924031,
+          "f1": 0.898267,
+          "roc_auc": 0.882911,
+          "mcc": 0.602178,
+          "auprc": 0.93627,
+          "specificity": 0.646091
+        },
+        "per_seed_mean_roc_auc": 0.878006,
+        "per_seed_std_roc_auc": 0.003159,
+        "per_seed_mean_mcc": 0.601317,
+        "per_seed_std_mcc": 0.014117,
+        "per_seed_mean_auprc": 0.933848,
+        "per_seed_std_auprc": 0.001519
+      }
+    }
+  },
+  "per_seed": [
+    {
+      "seed": 42,
+      "val": {
+        "accuracy": 0.83444,
+        "precision": 0.863868,
+        "recall": 0.925068,
+        "f1": 0.893421,
+        "roc_auc": 0.850065,
+        "mcc": 0.530863,
+        "auprc": 0.935775,
+        "specificity": 0.562372
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.899441,
+          "precision": 0.915493,
+          "recall": 0.955882,
+          "f1": 0.935252,
+          "roc_auc": 0.884576,
+          "mcc": 0.714047,
+          "auprc": 0.930544,
+          "specificity": 0.72093
+        },
+        "external": {
+          "accuracy": 0.840621,
+          "precision": 0.86803,
+          "recall": 0.917485,
+          "f1": 0.892073,
+          "roc_auc": 0.877083,
+          "mcc": 0.591692,
+          "auprc": 0.935103,
+          "specificity": 0.645
+        },
+        "nn03": {
+          "accuracy": 0.794872,
+          "precision": 0.833333,
+          "recall": 0.892857,
+          "f1": 0.862069,
+          "roc_auc": 0.834416,
+          "mcc": 0.468141,
+          "auprc": 0.911944,
+          "specificity": 0.545455
+        },
+        "nn05": {
+          "accuracy": 0.860182,
+          "precision": 0.898876,
+          "recall": 0.926641,
+          "f1": 0.912548,
+          "roc_auc": 0.868781,
+          "mcc": 0.56609,
+          "auprc": 0.943791,
+          "specificity": 0.614286
+        },
+        "total": {
+          "accuracy": 0.852477,
+          "precision": 0.877941,
+          "recall": 0.925581,
+          "f1": 0.901132,
+          "roc_auc": 0.881009,
+          "mcc": 0.614784,
+          "auprc": 0.933164,
+          "specificity": 0.658436
+        }
+      },
+      "best_epoch": 19
+    },
+    {
+      "seed": 100,
+      "val": {
+        "accuracy": 0.836484,
+        "precision": 0.86514,
+        "recall": 0.926431,
+        "f1": 0.894737,
+        "roc_auc": 0.847283,
+        "mcc": 0.536801,
+        "auprc": 0.934537,
+        "specificity": 0.566462
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.893855,
+          "precision": 0.914894,
+          "recall": 0.948529,
+          "f1": 0.931408,
+          "roc_auc": 0.900308,
+          "mcc": 0.699402,
+          "auprc": 0.948382,
+          "specificity": 0.72093
+        },
+        "external": {
+          "accuracy": 0.834979,
+          "precision": 0.867041,
+          "recall": 0.909627,
+          "f1": 0.887824,
+          "roc_auc": 0.867947,
+          "mcc": 0.578875,
+          "auprc": 0.931963,
+          "specificity": 0.645
+        },
+        "nn03": {
+          "accuracy": 0.820513,
+          "precision": 0.862069,
+          "recall": 0.892857,
+          "f1": 0.877193,
+          "roc_auc": 0.857143,
+          "mcc": 0.545398,
+          "auprc": 0.92593,
+          "specificity": 0.636364
+        },
+        "nn05": {
+          "accuracy": 0.857143,
+          "precision": 0.901515,
+          "recall": 0.918919,
+          "f1": 0.910134,
+          "roc_auc": 0.868616,
+          "mcc": 0.562752,
+          "auprc": 0.944212,
+          "specificity": 0.628571
+        },
+        "total": {
+          "accuracy": 0.846847,
+          "precision": 0.877037,
+          "recall": 0.917829,
+          "f1": 0.89697,
+          "roc_auc": 0.876237,
+          "mcc": 0.601678,
+          "auprc": 0.93618,
+          "specificity": 0.658436
+        }
+      },
+      "best_epoch": 24
+    },
+    {
+      "seed": 200,
+      "val": {
+        "accuracy": 0.835462,
+        "precision": 0.864504,
+        "recall": 0.925749,
+        "f1": 0.894079,
+        "roc_auc": 0.848779,
+        "mcc": 0.533832,
+        "auprc": 0.933278,
+        "specificity": 0.564417
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.893855,
+          "precision": 0.903448,
+          "recall": 0.963235,
+          "f1": 0.932384,
+          "roc_auc": 0.895862,
+          "mcc": 0.694489,
+          "auprc": 0.940017,
+          "specificity": 0.674419
+        },
+        "external": {
+          "accuracy": 0.836389,
+          "precision": 0.868668,
+          "recall": 0.909627,
+          "f1": 0.888676,
+          "roc_auc": 0.876532,
+          "mcc": 0.582978,
+          "auprc": 0.935579,
+          "specificity": 0.65
+        },
+        "nn03": {
+          "accuracy": 0.897436,
+          "precision": 0.9,
+          "recall": 0.964286,
+          "f1": 0.931034,
+          "roc_auc": 0.896104,
+          "mcc": 0.738622,
+          "auprc": 0.944599,
+          "specificity": 0.727273
+        },
+        "nn05": {
+          "accuracy": 0.87234,
+          "precision": 0.903346,
+          "recall": 0.938224,
+          "f1": 0.920455,
+          "roc_auc": 0.885659,
+          "mcc": 0.600722,
+          "auprc": 0.953002,
+          "specificity": 0.628571
+        },
+        "total": {
+          "accuracy": 0.847973,
+          "precision": 0.876106,
+          "recall": 0.92093,
+          "f1": 0.897959,
+          "roc_auc": 0.882547,
+          "mcc": 0.603554,
+          "auprc": 0.935884,
+          "specificity": 0.654321
+        }
+      },
+      "best_epoch": 24
+    },
+    {
+      "seed": 300,
+      "val": {
+        "accuracy": 0.840572,
+        "precision": 0.865823,
+        "recall": 0.93188,
+        "f1": 0.897638,
+        "roc_auc": 0.852995,
+        "mcc": 0.547074,
+        "auprc": 0.936073,
+        "specificity": 0.566462
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.865922,
+          "precision": 0.888889,
+          "recall": 0.941176,
+          "f1": 0.914286,
+          "roc_auc": 0.887483,
+          "mcc": 0.613005,
+          "auprc": 0.938897,
+          "specificity": 0.627907
+        },
+        "external": {
+          "accuracy": 0.8378,
+          "precision": 0.866171,
+          "recall": 0.915521,
+          "f1": 0.890162,
+          "roc_auc": 0.876857,
+          "mcc": 0.584366,
+          "auprc": 0.93342,
+          "specificity": 0.64
+        },
+        "nn03": {
+          "accuracy": 0.820513,
+          "precision": 0.862069,
+          "recall": 0.892857,
+          "f1": 0.877193,
+          "roc_auc": 0.866883,
+          "mcc": 0.545398,
+          "auprc": 0.916099,
+          "specificity": 0.636364
+        },
+        "nn05": {
+          "accuracy": 0.851064,
+          "precision": 0.894737,
+          "recall": 0.918919,
+          "f1": 0.906667,
+          "roc_auc": 0.87176,
+          "mcc": 0.539743,
+          "auprc": 0.946114,
+          "specificity": 0.6
+        },
+        "total": {
+          "accuracy": 0.843468,
+          "precision": 0.870968,
+          "recall": 0.92093,
+          "f1": 0.895252,
+          "roc_auc": 0.880314,
+          "mcc": 0.590209,
+          "auprc": 0.934442,
+          "specificity": 0.63786
+        }
+      },
+      "best_epoch": 21
+    },
+    {
+      "seed": 400,
+      "val": {
+        "accuracy": 0.837506,
+        "precision": 0.870013,
+        "recall": 0.920981,
+        "f1": 0.894772,
+        "roc_auc": 0.849478,
+        "mcc": 0.543765,
+        "auprc": 0.934574,
+        "specificity": 0.586912
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.893855,
+          "precision": 0.909091,
+          "recall": 0.955882,
+          "f1": 0.9319,
+          "roc_auc": 0.886457,
+          "mcc": 0.696575,
+          "auprc": 0.936364,
+          "specificity": 0.697674
+        },
+        "external": {
+          "accuracy": 0.825106,
+          "precision": 0.861163,
+          "recall": 0.901768,
+          "f1": 0.880998,
+          "roc_auc": 0.868556,
+          "mcc": 0.553957,
+          "auprc": 0.930169,
+          "specificity": 0.63
+        },
+        "nn03": {
+          "accuracy": 0.794872,
+          "precision": 0.857143,
+          "recall": 0.857143,
+          "f1": 0.857143,
+          "roc_auc": 0.873377,
+          "mcc": 0.493506,
+          "auprc": 0.931965,
+          "specificity": 0.636364
+        },
+        "nn05": {
+          "accuracy": 0.848024,
+          "precision": 0.891386,
+          "recall": 0.918919,
+          "f1": 0.904943,
+          "roc_auc": 0.875069,
+          "mcc": 0.528109,
+          "auprc": 0.946713,
+          "specificity": 0.585714
+        },
+        "total": {
+          "accuracy": 0.838964,
+          "precision": 0.871302,
+          "recall": 0.913178,
+          "f1": 0.891749,
+          "roc_auc": 0.874317,
+          "mcc": 0.58057,
+          "auprc": 0.931522,
+          "specificity": 0.641975
+        }
+      },
+      "best_epoch": 23
+    },
+    {
+      "seed": 500,
+      "val": {
+        "accuracy": 0.827798,
+        "precision": 0.863198,
+        "recall": 0.915531,
+        "f1": 0.888595,
+        "roc_auc": 0.855323,
+        "mcc": 0.515273,
+        "auprc": 0.938787,
+        "specificity": 0.564417
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.905028,
+          "precision": 0.921986,
+          "recall": 0.955882,
+          "f1": 0.938628,
+          "roc_auc": 0.887312,
+          "mcc": 0.73138,
+          "auprc": 0.936284,
+          "specificity": 0.744186
+        },
+        "external": {
+          "accuracy": 0.83921,
+          "precision": 0.870544,
+          "recall": 0.911591,
+          "f1": 0.890595,
+          "roc_auc": 0.875196,
+          "mcc": 0.590234,
+          "auprc": 0.935394,
+          "specificity": 0.655
+        },
+        "nn03": {
+          "accuracy": 0.846154,
+          "precision": 0.892857,
+          "recall": 0.892857,
+          "f1": 0.892857,
+          "roc_auc": 0.87987,
+          "mcc": 0.62013,
+          "auprc": 0.942077,
+          "specificity": 0.727273
+        },
+        "nn05": {
+          "accuracy": 0.860182,
+          "precision": 0.901887,
+          "recall": 0.92278,
+          "f1": 0.912214,
+          "roc_auc": 0.878103,
+          "mcc": 0.570052,
+          "auprc": 0.949642,
+          "specificity": 0.628571
+        },
+        "total": {
+          "accuracy": 0.852477,
+          "precision": 0.881306,
+          "recall": 0.92093,
+          "f1": 0.900682,
+          "roc_auc": 0.879721,
+          "mcc": 0.616817,
+          "auprc": 0.934788,
+          "specificity": 0.670782
+        }
+      },
+      "best_epoch": 29
+    },
+    {
+      "seed": 600,
+      "val": {
+        "accuracy": 0.840061,
+        "precision": 0.865738,
+        "recall": 0.931199,
+        "f1": 0.897276,
+        "roc_auc": 0.855433,
+        "mcc": 0.545776,
+        "auprc": 0.936411,
+        "specificity": 0.566462
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.893855,
+          "precision": 0.903448,
+          "recall": 0.963235,
+          "f1": 0.932384,
+          "roc_auc": 0.891758,
+          "mcc": 0.694489,
+          "auprc": 0.943566,
+          "specificity": 0.674419
+        },
+        "external": {
+          "accuracy": 0.823695,
+          "precision": 0.855556,
+          "recall": 0.907662,
+          "f1": 0.880839,
+          "roc_auc": 0.869244,
+          "mcc": 0.546739,
+          "auprc": 0.931633,
+          "specificity": 0.61
+        },
+        "nn03": {
+          "accuracy": 0.820513,
+          "precision": 0.83871,
+          "recall": 0.928571,
+          "f1": 0.881356,
+          "roc_auc": 0.857143,
+          "mcc": 0.528265,
+          "auprc": 0.892598,
+          "specificity": 0.545455
+        },
+        "nn05": {
+          "accuracy": 0.851064,
+          "precision": 0.891791,
+          "recall": 0.92278,
+          "f1": 0.907021,
+          "roc_auc": 0.868726,
+          "mcc": 0.535492,
+          "auprc": 0.942411,
+          "specificity": 0.585714
+        },
+        "total": {
+          "accuracy": 0.837838,
+          "precision": 0.865693,
+          "recall": 0.91938,
+          "f1": 0.891729,
+          "roc_auc": 0.875631,
+          "mcc": 0.574129,
+          "auprc": 0.933952,
+          "specificity": 0.621399
+        }
+      },
+      "best_epoch": 28
+    },
+    {
+      "seed": 700,
+      "val": {
+        "accuracy": 0.835462,
+        "precision": 0.857678,
+        "recall": 0.935967,
+        "f1": 0.895114,
+        "roc_auc": 0.843153,
+        "mcc": 0.527717,
+        "auprc": 0.92948,
+        "specificity": 0.533742
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.905028,
+          "precision": 0.910345,
+          "recall": 0.970588,
+          "f1": 0.939502,
+          "roc_auc": 0.902787,
+          "mcc": 0.727826,
+          "auprc": 0.951925,
+          "specificity": 0.697674
+        },
+        "external": {
+          "accuracy": 0.8378,
+          "precision": 0.862132,
+          "recall": 0.921415,
+          "f1": 0.890788,
+          "roc_auc": 0.865786,
+          "mcc": 0.581909,
+          "auprc": 0.926153,
+          "specificity": 0.625
+        },
+        "nn03": {
+          "accuracy": 0.74359,
+          "precision": 0.78125,
+          "recall": 0.892857,
+          "f1": 0.833333,
+          "roc_auc": 0.818182,
+          "mcc": 0.300765,
+          "auprc": 0.900027,
+          "specificity": 0.363636
+        },
+        "nn05": {
+          "accuracy": 0.863222,
+          "precision": 0.896296,
+          "recall": 0.934363,
+          "f1": 0.914934,
+          "roc_auc": 0.869774,
+          "mcc": 0.570069,
+          "auprc": 0.939612,
+          "specificity": 0.6
+        },
+        "total": {
+          "accuracy": 0.851351,
+          "precision": 0.872279,
+          "recall": 0.931783,
+          "f1": 0.901049,
+          "roc_auc": 0.874919,
+          "mcc": 0.609045,
+          "auprc": 0.932508,
+          "specificity": 0.63786
+        }
+      },
+      "best_epoch": 22
+    },
+    {
+      "seed": 800,
+      "val": {
+        "accuracy": 0.836484,
+        "precision": 0.866071,
+        "recall": 0.925068,
+        "f1": 0.894598,
+        "roc_auc": 0.844327,
+        "mcc": 0.537674,
+        "auprc": 0.930942,
+        "specificity": 0.570552
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.899441,
+          "precision": 0.915493,
+          "recall": 0.955882,
+          "f1": 0.935252,
+          "roc_auc": 0.886457,
+          "mcc": 0.714047,
+          "auprc": 0.944093,
+          "specificity": 0.72093
+        },
+        "external": {
+          "accuracy": 0.8378,
+          "precision": 0.864815,
+          "recall": 0.917485,
+          "f1": 0.890372,
+          "roc_auc": 0.868782,
+          "mcc": 0.583518,
+          "auprc": 0.929314,
+          "specificity": 0.635
+        },
+        "nn03": {
+          "accuracy": 0.846154,
+          "precision": 0.866667,
+          "recall": 0.928571,
+          "f1": 0.896552,
+          "roc_auc": 0.840909,
+          "mcc": 0.603382,
+          "auprc": 0.914476,
+          "specificity": 0.636364
+        },
+        "nn05": {
+          "accuracy": 0.869301,
+          "precision": 0.902985,
+          "recall": 0.934363,
+          "f1": 0.918406,
+          "roc_auc": 0.867568,
+          "mcc": 0.592822,
+          "auprc": 0.943953,
+          "specificity": 0.628571
+        },
+        "total": {
+          "accuracy": 0.850225,
+          "precision": 0.875367,
+          "recall": 0.925581,
+          "f1": 0.899774,
+          "roc_auc": 0.873825,
+          "mcc": 0.608162,
+          "auprc": 0.931758,
+          "specificity": 0.650206
+        }
+      },
+      "best_epoch": 31
+    },
+    {
+      "seed": 900,
+      "val": {
+        "accuracy": 0.838017,
+        "precision": 0.866327,
+        "recall": 0.927112,
+        "f1": 0.895689,
+        "roc_auc": 0.849657,
+        "mcc": 0.541467,
+        "auprc": 0.931154,
+        "specificity": 0.570552
+      },
+      "subsets": {
+        "internal": {
+          "accuracy": 0.893855,
+          "precision": 0.920863,
+          "recall": 0.941176,
+          "f1": 0.930909,
+          "roc_auc": 0.8921,
+          "mcc": 0.702889,
+          "auprc": 0.937384,
+          "specificity": 0.744186
+        },
+        "external": {
+          "accuracy": 0.840621,
+          "precision": 0.870787,
+          "recall": 0.913556,
+          "f1": 0.891659,
+          "roc_auc": 0.876464,
+          "mcc": 0.593414,
+          "auprc": 0.933547,
+          "specificity": 0.655
+        },
+        "nn03": {
+          "accuracy": 0.794872,
+          "precision": 0.857143,
+          "recall": 0.857143,
+          "f1": 0.857143,
+          "roc_auc": 0.902597,
+          "mcc": 0.493506,
+          "auprc": 0.958937,
+          "specificity": 0.636364
+        },
+        "nn05": {
+          "accuracy": 0.851064,
+          "precision": 0.900763,
+          "recall": 0.911197,
+          "f1": 0.90595,
+          "roc_auc": 0.863872,
+          "mcc": 0.548553,
+          "auprc": 0.939711,
+          "specificity": 0.628571
+        },
+        "total": {
+          "accuracy": 0.851351,
+          "precision": 0.881129,
+          "recall": 0.91938,
+          "f1": 0.899848,
+          "roc_auc": 0.881539,
+          "mcc": 0.614225,
+          "auprc": 0.934286,
+          "specificity": 0.670782
+        }
+      },
+      "best_epoch": 19
+    }
+  ]
+}
