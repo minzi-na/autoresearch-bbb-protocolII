@@ -55,12 +55,10 @@ SPLIT_MODE = "scaffold"
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter1 change: structural params (d_model, d_ffn, depth) dropped from
-    the search space. The manual coarse pilot (cbc41bd) found all top-3
-    trials converged on BASE_CONFIG defaults (512/1048/4); searching them
-    wasted ~10 of 50 trials on inferior structures. Concentrating the
-    full budget on the 8 dims that actually moved in pilot should give
-    TPE more density where the signal is.
+    Ranges are centered on the iter-200 BASE_CONFIG values. d_model/d_ffn/
+    depth are kept narrow because the iter-200 architecture was tuned with
+    those structural values fixed; widening the structural range too much
+    would re-open the phase-1 search.
     """
     return {
         # Optimizer
@@ -73,6 +71,10 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "drop_path":     trial.suggest_float("drop_path", 0.0, 0.1),
         "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.3),
         "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.3),
+        # Structure-adjacent (narrow)
+        "d_model":       trial.suggest_categorical("d_model", [384, 512, 768]),
+        "d_ffn":         trial.suggest_categorical("d_ffn", [768, 1048, 1536]),
+        "depth":         trial.suggest_int("depth", 3, 6),
     }
 
 
