@@ -213,12 +213,19 @@ def main():
     X_pool = prepare.build_feature_matrix(combo_tuple, pool_feats)
     print(f"[Data] pool size={len(pool_smiles)}  X_pool shape={X_pool.shape}")
 
-    # iter3: 5-seed mean objective to raise search SNR (vs prior 3-seed).
-    # Override the CLI-passed search_seeds inside objective so evaluate_hpo's
-    # frozen BUDGET (3 seeds) is not edited. The 2 extra seeds are taken from
-    # the confirm pool to keep search ⊂ confirm pattern consistent with
-    # pilot/iter1/iter2.
-    objective_seeds = [42, 100, 200, 300, 400]
+    # iter7: search seeds switched to a confirm-DISJOINT pool. iter1-6 all
+    # used objective_seeds ⊂ confirm_seeds ([42,100,200(+300,400)]) and
+    # every sampler/space/pruner variant converged onto trial#7's exact
+    # HP with identical 10-seed val. That convergence may be an artefact
+    # of search and confirm sharing splits — TPE/CmaEs see val on the
+    # same seed-induced split that confirm later uses, so the sampler
+    # learns to optimise *those splits* and trial#7 is just that pool's
+    # peak. Switching search to seeds disjoint from confirm forces the
+    # sampler to find HP that generalises across splits, not just memorise
+    # the confirm pool. Keep 5-seed mean objective intact.
+    #
+    # iter3 (kept) used objective_seeds [42, 100, 200, 300, 400].
+    objective_seeds = [1000, 2000, 3000, 4000, 5000]
 
     def objective(trial: optuna.Trial) -> float:
         cfg = suggest_config(trial)
