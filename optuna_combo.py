@@ -104,11 +104,6 @@ def suggest_config(trial: optuna.Trial) -> dict:
     depth are kept narrow because the iter-200 architecture was tuned with
     those structural values fixed; widening the structural range too much
     would re-open the phase-1 search.
-
-    iter7 added training-procedure HP via BASE_CONFIG extension
-    (best_train.py): lr_schedule + warmup + min_ratio, label_smoothing,
-    ema_decay. All defaults reproduce phase-1, so the wider search space
-    strictly contains the phase-1 baseline.
     """
     return {
         # Optimizer
@@ -125,15 +120,6 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "d_model":       trial.suggest_categorical("d_model", [384, 512, 768]),
         "d_ffn":         trial.suggest_categorical("d_ffn", [768, 1048, 1536]),
         "depth":         trial.suggest_int("depth", 3, 6),
-        # iter7+: training-procedure HP (BASE_CONFIG kwargs added in best_train.py).
-        # Phase-1 baseline lies at lr_schedule="constant", label_smoothing=0,
-        # ema_decay=0.999 so the search space strictly contains phase-1.
-        "lr_schedule":      trial.suggest_categorical(
-            "lr_schedule", ["constant", "cosine", "warmup_cosine"]),
-        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
-        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
-        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
-        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
     }
 
 
