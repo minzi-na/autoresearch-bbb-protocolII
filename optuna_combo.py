@@ -33,9 +33,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+import torch.utils.data as torch_data
 import optuna
 from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
+
+from sklearn.metrics import (
+    accuracy_score, matthews_corrcoef, roc_auc_score,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -47,6 +52,45 @@ import best_train as bt  # noqa: E402
 SEARCH_SEEDS_DEFAULT = [42, 100, 200]
 CONFIRM_SEEDS_DEFAULT = [42, 100, 200, 300, 400, 500, 600, 700, 800, 900]
 SPLIT_MODE = "scaffold"
+# Holdout subsets evaluated in the confirm phase (no extra retrain).
+# Restricted to the two most informative subsets for Phase 2 (matches the
+# bbb-combo1 pattern of measuring val + holdout in one reevaluation pass).
+HOLDOUT_SUBSETS = ["nn05", "total"]
+
+
+def _predict_probs(model, X_sub: np.ndarray, y_sub: np.ndarray,
+                   batch_size: int):
+    """Run sigmoid forward over X_sub and return (y_true, y_prob)."""
+    loader = torch_data.DataLoader(
+        torch_data.TensorDataset(
+            torch.tensor(X_sub, dtype=torch.float32),
+            torch.tensor(y_sub, dtype=torch.float32),
+        ),
+        batch_size=batch_size, shuffle=False,
+    )
+    model.eval()
+    device = next(model.parameters()).device
+    y_true, y_prob = [], []
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            probs = torch.sigmoid(model(x)).cpu().numpy()
+            y_prob.extend(probs.tolist())
+            y_true.extend(y.numpy().tolist())
+    return np.array(y_true, dtype=np.int64), np.array(y_prob, dtype=np.float64)
+
+
+def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
+    """AUC / MCC / Accuracy at the 0.5 threshold. Kept minimal: phase2
+    architecture_log only logs these three. Soft-voting ensemble is
+    reported separately at the per-trial level."""
+    y_pred = (y_prob > 0.5).astype(int)
+    has_both = len(set(y_true.tolist())) > 1
+    return {
+        "roc_auc":  round(float(roc_auc_score(y_true, y_prob) if has_both else 0.0), 6),
+        "mcc":      round(float(matthews_corrcoef(y_true, y_pred)), 6),
+        "accuracy": round(float(accuracy_score(y_true, y_pred)), 6),
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -225,27 +269,89 @@ def main():
 
     confirm_rows = []
     if not args.skip_confirm:
+        # Load holdout subsets once. Same scaler / batch-size handling as
+        # final_holdout_eval.py: rdkit slice scaler is fit on the per-seed
+        # train pool and applied to holdout (only when combo has 'rdkit').
+        holdout_data = {}
+        for s in HOLDOUT_SUBSETS:
+            smi, lab, ft = prepare.load_holdout_subset(s)
+            X_sub = prepare.build_feature_matrix(combo_tuple, ft)
+            holdout_data[s] = (lab, X_sub)
+            print(f"[Holdout] {s}: n={len(smi)} pos={int(lab.sum())} "
+                  f"X shape={X_sub.shape}")
+
         completed = [t for t in study.trials if t.state.name == "COMPLETE"]
         top_trials = sorted(completed, key=lambda t: t.value, reverse=True)[:args.top_k]
         print(f"\n[Confirm] running top-{len(top_trials)} trials "
-              f"on {len(confirm_seeds)} seeds ...")
+              f"on {len(confirm_seeds)} seeds (inline holdout: "
+              f"{HOLDOUT_SUBSETS}) ...")
         for rank, t in enumerate(top_trials, 1):
-            # Use the trial's params at full num_epochs (no search override).
             cfg = dict(t.params)
-            aucs = run_seeds(combo_tuple, X_pool, pool_labels, pool_smiles,
-                             prepare.FP_DIM, confirm_seeds, cfg)
-            mean_auc = float(np.mean(aucs))
-            std_auc  = float(np.std(aucs, ddof=0))
+            seed_val_aucs = []
+            seed_holdout = {s: [] for s in HOLDOUT_SUBSETS}
+            bs = cfg.get("batch_size", bt.BASE_CONFIG["batch_size"])
+            for seed in confirm_seeds:
+                train_idx, val_idx = prepare.scaffold_split_train_val(
+                    pool_smiles, SPLIT_MODE, seed, 0.8,
+                )
+                model, _, val_metrics, scaler = bt.build_and_train(
+                    combo=combo_tuple,
+                    X_pool=X_pool, y_pool=pool_labels,
+                    train_idx=train_idx, val_idx=val_idx,
+                    fp_dim=prepare.FP_DIM, seed=seed,
+                    config=cfg,
+                )
+                seed_val_aucs.append(float(val_metrics["roc_auc"]))
+                for s in HOLDOUT_SUBSETS:
+                    y_sub, X_sub = holdout_data[s]
+                    X_in = X_sub
+                    if scaler is not None and "rdkit" in combo_tuple:
+                        X_in = bt.apply_rdkit_scaler(
+                            X_sub, combo_tuple, prepare.FP_DIM, scaler,
+                        )
+                    y_true, y_prob = _predict_probs(model, X_in, y_sub, bs)
+                    seed_holdout[s].append(_holdout_metrics(y_true, y_prob))
+                del model
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+
+            mean_auc = float(np.mean(seed_val_aucs))
+            std_auc  = float(np.std(seed_val_aucs, ddof=0))
+            holdout_summary = {}
+            for s in HOLDOUT_SUBSETS:
+                aucs = np.array([m["roc_auc"]  for m in seed_holdout[s]])
+                mccs = np.array([m["mcc"]      for m in seed_holdout[s]])
+                accs = np.array([m["accuracy"] for m in seed_holdout[s]])
+                holdout_summary[s] = {
+                    "per_seed_mean_roc_auc":  round(float(aucs.mean()), 6),
+                    "per_seed_std_roc_auc":   round(float(aucs.std(ddof=0)), 6),
+                    "per_seed_mean_mcc":      round(float(mccs.mean()), 6),
+                    "per_seed_std_mcc":       round(float(mccs.std(ddof=0)), 6),
+                    "per_seed_mean_accuracy": round(float(accs.mean()), 6),
+                    "per_seed_std_accuracy":  round(float(accs.std(ddof=0)), 6),
+                    "per_seed_metrics":       seed_holdout[s],
+                }
             print(f"  rank{rank} trial#{t.number}: "
-                  f"mean={mean_auc:.6f} ± {std_auc:.6f}  "
+                  f"val_mean={mean_auc:.6f} ± {std_auc:.6f}  "
                   f"(search={t.value:.6f})")
+            for s in HOLDOUT_SUBSETS:
+                hs = holdout_summary[s]
+                print(f"    {s:>6s}: "
+                      f"AUC={hs['per_seed_mean_roc_auc']:.6f}"
+                      f"±{hs['per_seed_std_roc_auc']:.6f}  "
+                      f"MCC={hs['per_seed_mean_mcc']:.6f}"
+                      f"±{hs['per_seed_std_mcc']:.6f}  "
+                      f"Acc={hs['per_seed_mean_accuracy']:.6f}"
+                      f"±{hs['per_seed_std_accuracy']:.6f}")
             confirm_rows.append({
                 "rank": rank,
                 "trial": t.number,
                 "search_mean_val_auc": t.value,
                 "confirm_mean_val_auc": mean_auc,
                 "confirm_std_val_auc": std_auc,
-                "confirm_per_seed_val_auc": aucs,
+                "confirm_per_seed_val_auc": seed_val_aucs,
+                "holdout": holdout_summary,
                 "params": t.params,
             })
 
@@ -269,6 +375,40 @@ def main():
         json.dump(summary, f, indent=2, default=str)
     print(f"\n[Output] {summary_path}")
 
+    # ── architecture_log.md row (best confirm trial of THIS study) ─────────
+    if confirm_rows:
+        best_confirm = max(confirm_rows, key=lambda r: r["confirm_mean_val_auc"])
+        log_path = REPO_ROOT / "results" / args.combo / "architecture_log.md"
+        if not log_path.exists():
+            log_path.write_text(
+                f"# {args.combo} — architecture log\n\n"
+                "val: per-seed mean±std (10 confirm seeds)  |  subsets "
+                "(nn05/total): per-seed mean±std for AUC/MCC/Acc.\n\n"
+                "| study | trial | val_auc | "
+                "nn05_auc | nn05_mcc | nn05_acc | "
+                "total_auc | total_mcc | total_acc |\n"
+                "|-------|-------|---------|"
+                "----------|----------|----------|"
+                "-----------|-----------|-----------|\n"
+            )
+        def _fmt(mean, std):
+            return f"{mean:.4f}±{std:.4f}"
+        hd = best_confirm["holdout"]
+        nn05 = hd["nn05"]; tot = hd["total"]
+        row = (
+            f"| {args.study_name or 'inmem'} | {best_confirm['trial']} | "
+            f"{_fmt(best_confirm['confirm_mean_val_auc'], best_confirm['confirm_std_val_auc'])} | "
+            f"{_fmt(nn05['per_seed_mean_roc_auc'],  nn05['per_seed_std_roc_auc'])} | "
+            f"{_fmt(nn05['per_seed_mean_mcc'],      nn05['per_seed_std_mcc'])} | "
+            f"{_fmt(nn05['per_seed_mean_accuracy'], nn05['per_seed_std_accuracy'])} | "
+            f"{_fmt(tot['per_seed_mean_roc_auc'],   tot['per_seed_std_roc_auc'])} | "
+            f"{_fmt(tot['per_seed_mean_mcc'],       tot['per_seed_std_mcc'])} | "
+            f"{_fmt(tot['per_seed_mean_accuracy'],  tot['per_seed_std_accuracy'])} |\n"
+        )
+        with open(log_path, "a") as f:
+            f.write(row)
+        print(f"[Output] appended row to {log_path}")
+
     print("\n" + "=" * 60)
     print(f"[Done] best search trial #{study.best_trial.number}  "
           f"val_auc={study.best_value:.6f}")
@@ -277,6 +417,15 @@ def main():
         print(f"[Done] best confirm trial #{best_confirm['trial']}  "
               f"val_auc={best_confirm['confirm_mean_val_auc']:.6f} "
               f"± {best_confirm['confirm_std_val_auc']:.6f}")
+        for s in HOLDOUT_SUBSETS:
+            hs = best_confirm["holdout"][s]
+            print(f"[Done] best confirm {s:>6s}: "
+                  f"AUC={hs['per_seed_mean_roc_auc']:.6f}"
+                  f"±{hs['per_seed_std_roc_auc']:.6f}  "
+                  f"MCC={hs['per_seed_mean_mcc']:.6f}"
+                  f"±{hs['per_seed_std_mcc']:.6f}  "
+                  f"Acc={hs['per_seed_mean_accuracy']:.6f}"
+                  f"±{hs['per_seed_std_accuracy']:.6f}")
     print("=" * 60)
 
 
