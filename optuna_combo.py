@@ -36,7 +36,7 @@ import torch
 import torch.utils.data as torch_data
 import optuna
 from optuna.samplers import TPESampler
-from optuna.pruners import MedianPruner
+from optuna.pruners import MedianPruner, NopPruner
 
 from sklearn.metrics import (
     accuracy_score, matthews_corrcoef, roc_auc_score,
@@ -230,7 +230,15 @@ def main():
         return float(np.mean(aucs))
 
     sampler = TPESampler(seed=args.sampler_seed, n_startup_trials=15, multivariate=True)
-    pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=5)
+    # iter6: remove pruning. iter1-5 always converged onto trial#7 (same HP,
+    # same per-seed val under TPE and CmaEs). MedianPruner aggressively
+    # culls 60-90% of trials mid-epoch using the FIRST seed's curve only,
+    # which may be killing late-blooming HP regions before they get a fair
+    # second-seed evaluation. With NopPruner all 30 trials run full
+    # search_num_epochs and the sampler sees every region's true 5-seed
+    # mean. If a late-bloomer exists outside trial#7's basin, this is how
+    # it surfaces.
+    pruner = NopPruner()
     study = optuna.create_study(
         direction="maximize",
         sampler=sampler,
