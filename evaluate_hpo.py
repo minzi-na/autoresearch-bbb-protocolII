@@ -24,8 +24,8 @@ Usage:
     conda run -n rapids-25.02 python evaluate_hpo.py \\
         --combo maccs+scage1+mole --iter-id 1 --note "narrow lr range"
 
-Frozen budget (cannot be changed by the agent via this script):
-    n_trials=50, top_k=3, search_num_epochs=30,
+Budget (user can adjust; see BUDGET dict comments for history):
+    n_trials=30, top_k=3, search_num_epochs=30,
     search_seeds=[42,100,200], confirm_seeds=[42,100,...,900]
 """
 
@@ -47,7 +47,13 @@ REPO_ROOT = Path(__file__).resolve().parent
 # ─────────────────────────────────────────────────────────────────────────────
 
 BUDGET = {
-    "n_trials":          50,
+    # n_trials lowered 50 -> 30 from iter5 onward (user budget decision).
+    # iter1-4 ran with 50 but all hit trial#7 deterministically (TPE wide
+    # space) so trial-count fairness loss is negligible — sampler had
+    # plenty of headroom. n_startup_trials=15 for both TPE/CmaEs means
+    # 30 = 15 startup + 15 exploitation, still enough for the sampler
+    # to learn.
+    "n_trials":          30,
     "top_k":             3,
     "search_num_epochs": 30,
     "search_seeds":      "42,100,200",

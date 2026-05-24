@@ -97,8 +97,10 @@ For each iteration `N`:
    files) while preventing learning loss on discard.
    Use Bash with `run_in_background=true`. **Do NOT poll or stream output.**
    Wait for the completion notification, then read the appended TSV row.
-   Expected wall-time: ~2 hours (50 trials × 3 search seeds × num_epochs=30
-   + top-3 × 10 confirm seeds × num_epochs=50).
+   Expected wall-time: ~45-55 min/iter (30 trials × 5 search seeds ×
+   num_epochs=30 with pruning ~60% saved + top-3 × 10 confirm seeds ×
+   num_epochs=50 with inline holdout). Budget lowered from 50 trials
+   to 30 from iter5 onward (user decision; iter1-4 ran 50).
 7. Inspect the new row's `keep` field:
    - `True`  → leave commit in place. Proceed to iter `N+1`.
    - `False` → **`git revert <commit>` only.** Do NOT use `git reset --hard`.
@@ -141,13 +143,12 @@ For each iteration `N`:
 
 ## What CANNOT be optimized via this loop
 
-The frozen budget in `evaluate_hpo.py` (`BUDGET` dict) is the single
-source of truth for iter comparison. If you want to test "would a
-larger budget help?" you must:
-  1. Write a separate one-off study (not via this loop)
-  2. Document the finding in `conclusion.md`
-Changing `BUDGET` mid-loop would invalidate all prior keep/discard
-comparisons.
+The budget in `evaluate_hpo.py` (`BUDGET` dict) is the working source
+of truth for iter comparison. The user may revise it (e.g., n_trials
+50 → 30 from iter5 onward for wall-time) but each revision should be
+documented in the BUDGET dict comment so prior-vs-current iter
+comparisons are interpreted carefully (results.tsv n_trials column
+records the actual value used per iter).
 
 ## Final reporting
 
