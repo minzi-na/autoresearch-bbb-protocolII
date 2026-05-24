@@ -100,26 +100,31 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    Ranges are centered on the iter-200 BASE_CONFIG values. d_model/d_ffn/
-    depth are kept narrow because the iter-200 architecture was tuned with
-    those structural values fixed; widening the structural range too much
-    would re-open the phase-1 search.
+    iter4: search space narrowed around iter1/2/3 deterministic top-trial
+    #7 (lr=1.5e-4 wd=1.5e-4 bs=128 dropout=0.24 drop_path=0.002
+    mod_drop_p=0.09 head_dropout=0.20 d_model=512 d_ffn=1536 depth=5).
+    The wide iter2-iter3 search space had TPE re-discover this single
+    region every iter and never refine within it. By collapsing the
+    structural categoricals and shrinking continuous ranges to a fine
+    band around trial#7, the 50-trial budget can do fine-grained
+    exploitation rather than waste trials at distant regions that
+    iter1/2/3 already showed are worse.
     """
     return {
-        # Optimizer
-        "lr":            trial.suggest_float("lr", 1e-5, 5e-4, log=True),
-        "weight_decay":  trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True),
-        "batch_size":    trial.suggest_categorical("batch_size", [64, 128, 256]),
-        "grad_clip_max_norm": trial.suggest_float("grad_clip_max_norm", 0.5, 2.0),
-        # Regularization
-        "dropout":       trial.suggest_float("dropout", 0.0, 0.4),
-        "drop_path":     trial.suggest_float("drop_path", 0.0, 0.1),
-        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.3),
-        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.3),
-        # Structure-adjacent (narrow)
-        "d_model":       trial.suggest_categorical("d_model", [384, 512, 768]),
-        "d_ffn":         trial.suggest_categorical("d_ffn", [768, 1048, 1536]),
-        "depth":         trial.suggest_int("depth", 3, 6),
+        # Optimizer — tightened ~3-5x around trial#7
+        "lr":            trial.suggest_float("lr", 7e-5, 3e-4, log=True),
+        "weight_decay":  trial.suggest_float("weight_decay", 3e-5, 5e-4, log=True),
+        "batch_size":    trial.suggest_categorical("batch_size", [128]),
+        "grad_clip_max_norm": trial.suggest_float("grad_clip_max_norm", 0.8, 1.5),
+        # Regularization — band around trial#7 with some headroom
+        "dropout":       trial.suggest_float("dropout", 0.10, 0.35),
+        "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
+        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.20),
+        "head_dropout":  trial.suggest_float("head_dropout", 0.10, 0.30),
+        # Structure — collapsed to trial#7 values (effectively fixed)
+        "d_model":       trial.suggest_categorical("d_model", [512]),
+        "d_ffn":         trial.suggest_categorical("d_ffn", [1536]),
+        "depth":         trial.suggest_int("depth", 4, 6),
     }
 
 
