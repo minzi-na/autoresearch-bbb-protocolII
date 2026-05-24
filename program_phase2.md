@@ -37,33 +37,64 @@ All commands below must use the combo string for your branch.
 
 ## Files
 
-- **EDIT ONLY** `optuna_combo.py`. Modify any of:
-  - `suggest_config()` — search space shape, ranges, log/categorical/int
+**Phase-2 lever surface**: phase-1 nailed down the model architecture
+(layer classes, attention pool, head structure). Phase-2's job is to
+find better training hyperparameters for that frozen architecture.
+Following the bbb-combo1 pattern, the lever is therefore split across
+TWO files — `optuna_combo.py` (search-side) and `best_train.py`
+(training-side HP space). The model class definitions stay frozen.
+
+- **`optuna_combo.py` — fully editable.** Modify any of:
+  - `suggest_config()` — search space shape, ranges, log/categorical/int.
+    Add new HP keys here when a new BASE_CONFIG kwarg is exposed.
   - sampler (`TPESampler`, `CmaEsSampler`, `RandomSampler`, ...)
-  - pruner (none currently; can add if you also hook train_model)
+  - pruner (`MedianPruner`, `NopPruner`, `SuccessiveHalvingPruner`, ...)
   - `objective()` — single-seed / multi-seed mean / staged variants
   - `run_seeds()` — eval protocol per trial
   - `SEARCH_SEEDS_DEFAULT`, `CONFIRM_SEEDS_DEFAULT`, `SPLIT_MODE`
-    (constants override-able even though `evaluate_hpo.py` passes CLI flags
-    that may override them)
+    (constants override-able even though `evaluate_hpo.py` passes CLI
+    flags that may override them).
+- **`best_train.py` — editable on a restricted surface.** Phase-1 best
+  was refactored here so Optuna trials can inject a config dict (commit
+  `cc2a448`). Phase-2 may extend that surface as long as the two
+  invariants below hold.
+  - **Editable**:
+    - `BASE_CONFIG` — add new HP keys (e.g. `lr_schedule`,
+      `optimizer_type`, `label_smoothing`, `warmup_epochs`, ...) with
+      defaults that reproduce the phase-1 behaviour when set.
+    - `train_model` / `train_model_with_pruning` — add new optional
+      arguments (default `None` or default-matching values) that
+      consume the new BASE_CONFIG keys. New training hooks (LR
+      scheduler step, warmup, label-smoothing in the loss, optimizer
+      family switch, etc.) belong here.
+    - `build_and_train` / `build_and_train_with_pruning` — wire the
+      cfg keys into optimizer / loss / scheduler construction, then
+      pass to `train_model(_with_pruning)`.
+  - **Frozen (DO NOT edit)**:
+    - Model class definitions: `SpatialGatingUnit`, `gMLPBlock`,
+      `gMLP`, `MultiModalGMLPFromFlat`. Architecture is phase-1
+      output; phase-2 only tunes training around it.
+    - The phase-1 `build_and_train` public-API call signature when
+      invoked without a `config` override must produce byte-identical
+      training to the cc2a448 baseline. Any new BASE_CONFIG key MUST
+      default to a value that turns off the new behaviour (e.g.
+      `lr_schedule="constant"`, `label_smoothing=0.0`) so that
+      `evaluate_combo.py` / `final_holdout_eval.py` (which call
+      `build_and_train(..., config=None)` via `train.py`) keep
+      reproducing phase-1 results bit-for-bit.
 - Do **NOT** touch:
-  - `best_train.py` — frozen iter-200 architecture + `build_and_train`
-    public API. New helpers (`*_with_pruning`) can be appended only
-    when an iter explicitly hooks pruning; existing public API stays
-    byte-identical so phase-1 paths reproduce.
   - `train.py` — phase-1 active file, kept frozen for repro.
   - `prepare.py`, `evaluate_combo.py`, `final_holdout_eval.py`
-  - `evaluate_hpo.py` — this iteration runner; its frozen `BUDGET`
-    (n_trials=50, top_k=3, search_num_epochs=30, search/confirm seeds)
-    is the single source of truth for fair iter comparison.
+  - `evaluate_hpo.py` — this iteration runner; `BUDGET` is the working
+    source of truth for iter comparison (user can revise it but each
+    revision must be documented in the BUDGET-dict comment).
   - `HOLDOUT_SUBSETS` in `optuna_combo.py` — frozen at `["nn05",
     "total"]` so the `architecture_log.md` column semantics stay
-    stable across iters. (The constant lives in optuna_combo.py and
-    is otherwise editable, but treat it as frozen for the loop.)
+    stable across iters.
   - data paths anywhere.
-- Edit `optuna_combo.py` with **partial Edit (old_string → new_string)**,
-  never rewrite the whole file. Read the function first, then make a
-  minimal diff.
+- Edit `optuna_combo.py` and `best_train.py` with **partial Edit
+  (old_string → new_string)**, never rewrite the whole file. Read the
+  function first, then make a minimal diff.
 
 ## Iteration loop
 
@@ -75,14 +106,21 @@ For each iteration `N`:
    findings — agent should write these notes richly enough to inform
    the next iter, even when the iter was reverted.
 2. Pick ONE search-design change. Examples:
-   - narrow `lr` range based on previous study's top trials
+   - narrow / widen continuous HP ranges (`lr`, `wd`, `dropout`, ...)
+     based on previous study's top trials
    - swap `TPESampler` → `CmaEsSampler` for better local exploitation
    - increase `objective` aggregation from 3-seed to 5-seed mean
-   - drop structural params (`d_model`/`d_ffn`/`depth`) from search
+   - drop / re-include structural params (`d_model`/`d_ffn`/`depth`)
+     from search
    - widen regularization range (`mod_drop_p`, `head_dropout`)
-   - add a categorical for AdamW vs Lion vs SGD-style optimizer
-     (would require also editing `best_train.py` — out of scope for now)
-3. Apply via partial Edit on `optuna_combo.py`.
+   - **expose a new training-side HP** in `best_train.py` BASE_CONFIG
+     and search it via `optuna_combo.py`: LR schedule (cosine /
+     warmup), optimizer family (AdamW / Adam / Lion), label smoothing,
+     `es_metric` swap, etc. Default value must reproduce phase-1
+     behaviour so the phase-1 build_and_train path stays byte-identical
+     (see Files / `best_train.py` editable surface).
+3. Apply via partial Edit on `optuna_combo.py` (and on `best_train.py`
+   when the lever requires a new BASE_CONFIG key or new training hook).
 4. **Haiku 4.5 sanity check.** Spawn a Haiku 4.5 agent to review the diff
    for syntax + obvious logic errors. If flagged, fix before continuing.
 5. `git add optuna_combo.py && git commit -m "iter<N>: <short>"`.
