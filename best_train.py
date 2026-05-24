@@ -1,18 +1,44 @@
 #!/usr/bin/env python3
 """
-train.py — model + training loop for autoresearch_combos_v2.
+best_train.py — phase-1 best architecture snapshot for Phase-2 HPO.
 
-This is the SINGLE FILE THE AGENT EDITS.
+Created from train.py at commit cc2a448 ("Add HPO-friendly best_train.py
+for Phase 2") as a snapshot of the iter198 best architecture, refactored
+so Optuna trials can inject a config dict instead of mutating the
+module-level BASE_CONFIG. evaluate_combo.py / final_holdout_eval.py
+keep importing train.py (NOT this file), so phase-1 paths are not
+affected by anything that happens here.
 
-Editable:
-  - SpatialGatingUnit, gMLPBlock, gMLP, MultiModalGMLPFromFlat (the model)
-  - train_model() and eval_model() (training/eval logic)
+Phase-2 edit surface (see program_phase2.md → Files section for the
+authoritative rules):
 
-Do NOT edit:
-  - BASE_CONFIG (frozen below)
-  - the import / public-API surface used by evaluate_combo.py and
-    final_holdout_eval.py: build_and_train(...) -> (model, train_info, val_metrics)
-  - device handling
+  FROZEN (phase-1 output; never edit in phase-2):
+    - Model class definitions: SpatialGatingUnit, gMLPBlock, gMLP,
+      MultiModalGMLPFromFlat. Phase-1 architecture sweep is the
+      single source of truth for these.
+    - device handling.
+    - The phase-1 behaviour of build_and_train(config=None) — that
+      call MUST keep reproducing iter198 byte-for-byte after any
+      phase-2 change. Adding new BASE_CONFIG keys is allowed only if
+      their default values turn the new behaviour OFF (e.g.
+      lr_schedule="constant", label_smoothing=0.0, ema_decay=0.999).
+
+  EDITABLE (phase-2 lever surface):
+    - BASE_CONFIG: add new HP keys with phase-1-reproducing defaults
+      (see Phase-2 iter7+ block at the end of the dict).
+    - train_model / train_model_with_pruning: new optional arguments
+      (with defaults that disable the new behaviour) + new training
+      hooks (LR scheduler step, label smoothing in loss target,
+      optimizer-family branch, ...).
+    - build_and_train / build_and_train_with_pruning: wire the new
+      cfg keys into optimizer / loss / scheduler construction, then
+      forward to the train_model variants.
+    - _build_lr_scheduler (and any analogous helpers introduced for
+      new BASE_CONFIG keys).
+
+Phase-2 SHOULD touch this file only in concert with a matching change
+in optuna_combo.py (suggest_config), and only via partial Edit — never
+rewrite the file as a whole.
 """
 
 import random
@@ -34,7 +60,21 @@ from sklearn.metrics import (
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FROZEN — DO NOT EDIT
+#  BASE_CONFIG + device — phase-2 EDIT SURFACE (with constraints)
+#
+#  Phase-1 view: this block was frozen.
+#  Phase-2 view: BASE_CONFIG is the public training-procedure HP space.
+#    - You MAY add new keys (LR schedule, label smoothing, ema decay,
+#      optimizer family, ...) so suggest_config() in optuna_combo.py can
+#      search them.
+#    - Each new key's DEFAULT must reproduce phase-1 byte-for-byte when
+#      build_and_train is invoked with config=None (i.e. the new
+#      behaviour is OFF by default). See the "Phase-2 iter7+" block
+#      inside the dict for examples (lr_schedule="constant",
+#      label_smoothing=0.0, ema_decay=0.999).
+#    - Existing keys' default values are FROZEN at phase-1 values.
+#      Do not change them; only add new keys.
+#  Device handling is FROZEN.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 BASE_CONFIG = {
@@ -75,7 +115,18 @@ def set_seed(seed: int):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  EDITABLE — model definition
+#  FROZEN in phase-2 — model architecture (set by phase-1 iter1-200 sweep)
+#
+#  Phase-1 view: this block was the agent's single edit surface.
+#  Phase-2 view: the model architecture is now an output of phase-1, not
+#  an input to phase-2. SpatialGatingUnit, gMLPBlock, gMLP, and
+#  MultiModalGMLPFromFlat are FROZEN. Do not modify constructor
+#  arguments, forward(), submodule shapes, init schemes, or anything
+#  that would change the computation graph or its initial weights.
+#
+#  The constructor kwargs (drop_path, mod_drop_p, head_dropout, ...) ARE
+#  HP knobs that BASE_CONFIG can override — that is intentional and not
+#  considered an edit to the model definition.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class SpatialGatingUnit(nn.Module):
@@ -203,7 +254,22 @@ class MultiModalGMLPFromFlat(nn.Module):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  EDITABLE — training / eval
+#  EDITABLE in phase-2 — training / eval
+#
+#  This block is the phase-2 lever for new training-procedure HP
+#  (LR scheduler step, label smoothing in BCE target, optimizer-family
+#  branches, EMA decay sourced from cfg, ...). When adding a new hook:
+#    1. Thread it as an OPTIONAL argument with a default that disables
+#       the new behaviour (e.g. scheduler=None, label_smoothing=0.0).
+#    2. Inside the loop, branch only when the value is non-default —
+#       the phase-1 byte-identical code path must still execute when
+#       all new args take their defaults.
+#    3. Expose the same HP in BASE_CONFIG (above) and in
+#       optuna_combo.py:suggest_config so Optuna can search it.
+#  Do NOT touch the optimizer construction, the EMA bookkeeping
+#  semantics, the early-stopping logic, the val-pass shape, or the
+#  returned train_info schema in a way that breaks the phase-1
+#  byte-identical guarantee.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def train_model(model, optimizer, train_loader, val_loader, loss_fn,
@@ -330,7 +396,27 @@ def eval_model(model, loader):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FROZEN — public API used by evaluate_combo.py / final_holdout_eval.py
+#  Public API — phase-1 byte-identical guarantee
+#
+#  build_and_train(...) is the entry point that evaluate_combo.py and
+#  final_holdout_eval.py call via train.py (NOT this file), so they are
+#  unaffected by changes here. Phase-2 (optuna_combo.py and
+#  phase2_holdout integration) DOES call best_train.build_and_train
+#  with a `config` override.
+#
+#  Editable in phase-2:
+#    - cfg-driven wiring: scheduler construction via _build_lr_scheduler,
+#      optimizer/loss kwargs branched on new BASE_CONFIG keys, etc.
+#    - forwarding new optional kwargs to train_model variants.
+#
+#  Frozen:
+#    - The CALL SIGNATURE of build_and_train (positional args + the
+#      `config` kwarg).
+#    - The RETURN tuple shape: (model, train_info, val_metrics, scaler).
+#    - The behaviour when invoked as build_and_train(..., config=None):
+#      MUST reproduce the iter198 baseline byte-for-byte. New code paths
+#      (scheduler, smoothing, ...) must be gated on cfg values whose
+#      defaults disable them.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def build_and_train(
@@ -439,12 +525,22 @@ def apply_rdkit_scaler(X: np.ndarray, combo, fp_dim: dict, scaler):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Phase 2 HPO additions (Optuna pruning hooks).
-#  These functions mirror train_model / build_and_train above, with an extra
-#  trial.report + should_prune call per epoch. Phase 1 code paths (evaluate_combo.py,
-#  final_holdout_eval.py) keep using train_model / build_and_train and are
-#  byte-identical to before. optuna is imported lazily so the phase-1 path
-#  has no optuna dependency.
+#  Phase-2 HPO additions — Optuna pruning hooks (iter2+) and any phase-2
+#  helpers that mirror but do not replace the phase-1 functions above.
+#
+#  These functions exist solely to support optuna_combo.py:
+#    - train_model_with_pruning / build_and_train_with_pruning mirror
+#      train_model / build_and_train with an added trial.report +
+#      should_prune call per epoch. optuna is imported lazily so the
+#      phase-1 path has no optuna dependency.
+#  Phase-1 code paths (evaluate_combo.py, final_holdout_eval.py) keep
+#  importing train.py (NOT best_train.py), so anything added below has
+#  zero impact on phase-1 reproducibility.
+#
+#  Phase-2 editable: append new helpers parallel to the *_with_pruning
+#  pair when a new HPO lever needs a hook not expressible inside
+#  train_model. Do NOT remove or break the existing *_with_pruning
+#  signature (optuna_combo.py depends on it).
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn,
