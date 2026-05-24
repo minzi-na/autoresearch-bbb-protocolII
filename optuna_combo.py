@@ -190,14 +190,7 @@ def main():
     )
 
     t0 = time.time()
-    # Resume-aware: budget = args.n_trials *total* trials in the study, so when
-    # resuming after interruption we only run the remainder (zero if already done).
-    n_existing = len(study.trials)
-    remaining = max(0, args.n_trials - n_existing)
-    if n_existing:
-        print(f"[Search] study has {n_existing} existing trials; "
-              f"running {remaining} more to reach {args.n_trials}.")
-    study.optimize(objective, n_trials=remaining, show_progress_bar=False)
+    study.optimize(objective, n_trials=args.n_trials, show_progress_bar=False)
     search_min = (time.time() - t0) / 60.0
     print(f"\n[Search] done in {search_min:.1f} min "
           f"({len(study.trials)} trials)")
