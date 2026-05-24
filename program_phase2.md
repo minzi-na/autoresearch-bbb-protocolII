@@ -153,13 +153,32 @@ comparisons.
 
 When the loop terminates (convergence, ceiling, or human stop):
 
-- Last `keep=True` row in `results/<combo>/hpo/results.tsv` = winning
-  HP configuration.
-- Corresponding `study_auto_iter<N>_<commit>.json` has the full top-3
-  confirm details (per-seed val_auc, params).
+**Selection rule (final goal):** the phase-2 best is the `keep=True`
+row whose study JSON best-confirm trial satisfies BOTH
+
+  - holdout `nn05` per-seed mean roc_auc > phase-1 iter198 nn05 per-seed
+    mean (0.870011)
+  - holdout `total` per-seed mean roc_auc > phase-1 iter198 total per-seed
+    mean (0.879823)
+
+If multiple rows qualify, pick the one with the largest sum of those
+two excesses. If no row qualifies, the phase-2 outcome is **"no
+improvement found"** even when individual `keep=True` rows beat the
+phase-1 val mean — the val-only keep gate is intentionally permissive
+to keep the search direction alive, but the final goal is holdout
+generalization on both subsets, not val.
+
+Artifacts:
+
+- Winning row in `results/<combo>/hpo/results.tsv` (if any).
+- Corresponding `study_auto_iter<N>_<commit>.json` carries the top-3
+  confirm details plus the per-trial `holdout` block (per-seed mean±std
+  for AUC/MCC/Accuracy on nn05 and total).
+- `architecture_log.md` row for direct phase-1 vs phase-2 comparison.
 - Write `results/<combo>/hpo/conclusion.md` with:
   - Number of iterations run, distribution of keep/discard
-  - Best confirm mean ± std vs phase-1 baseline (improvement or not)
+  - Best confirm mean ± std vs phase-1 baseline (val + nn05 + total)
+  - Whether the final-goal holdout condition was met, and by which iter
   - The winning HP configuration (or "no improvement found")
   - 1-2 sentences on what kinds of changes mattered (if any)
 
@@ -168,6 +187,12 @@ When the loop terminates (convergence, ceiling, or human stop):
 From `results/maccs+scage1+mole/results.tsv` (iter198):
 - `mean_val_auc` = 0.852661 ± 0.003551 (10 scaffold seeds)
 - Threshold to beat (current keep rule, mean-only): **0.852661**
+
+From `results/maccs+scage1+mole/holdout_eval/iter0198_2e8cbdc9f5.json`
+(10-seed per-seed mean):
+- nn05  ROC-AUC = 0.870011 ± 0.008095
+- total ROC-AUC = 0.879823 ± 0.004205
+- Final-goal phase-2 best must exceed BOTH (see Final reporting).
 
 From the manual coarse pilot (cbc41bd, before this loop):
 - Best confirm `mean_val_auc` = 0.852262 ± 0.003839
