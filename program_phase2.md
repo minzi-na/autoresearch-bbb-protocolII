@@ -128,6 +128,16 @@ For each iteration `N`:
 - **Run ceiling:** absolute max of 12 iterations regardless of keep/
   discard mix. If 12 reached without a definitive conclusion, summarize
   and stop.
+- **Autonomy (default for this loop):** the agent chooses each iter's
+  design lever using prior iter `note` rows + study JSON top-region
+  summaries + architecture_log holdout signal as guide, then runs the
+  full loop (edit → commit → evaluate_hpo → keep/discard → revert if
+  needed → next iter) without per-iter user confirmation. User is
+  alerted on milestones: a `keep=True` row, a 5-consecutive-discard
+  early-termination trigger, a forced direction switch (3 consecutive
+  same-family discards), or a hard failure (CUDA OOM, training
+  divergence). Autonomy does not change *what* is allowed — only
+  *who* makes the per-iter lever call (agent vs human).
 
 ## What CANNOT be optimized via this loop
 
