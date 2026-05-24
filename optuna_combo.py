@@ -35,6 +35,7 @@ import pandas as pd
 import torch
 import optuna
 from optuna.samplers import TPESampler
+from optuna.pruners import MedianPruner
 
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -82,20 +83,36 @@ def suggest_config(trial: optuna.Trial) -> dict:
 #  Per-seed evaluation
 # ─────────────────────────────────────────────────────────────────────────────
 
-def run_seeds(combo_tuple, X_pool, y_pool, smiles, fp_dim, seeds, config):
-    """Train + evaluate one config across `seeds`. Returns list of val ROC-AUC."""
+def run_seeds(combo_tuple, X_pool, y_pool, smiles, fp_dim, seeds, config, trial=None):
+    """Train + evaluate one config across `seeds`. Returns list of val ROC-AUC.
+
+    When `trial` is given, only the FIRST seed uses build_and_train_with_pruning;
+    a TrialPruned exception aborts the whole call. Subsequent seeds (and the
+    confirm phase, which passes trial=None) use the no-pruning path so the
+    pruner's step axis stays a clean per-epoch index inside the first seed.
+    """
     aucs = []
-    for seed in seeds:
+    for i, seed in enumerate(seeds):
         train_idx, val_idx = prepare.scaffold_split_train_val(
             smiles, SPLIT_MODE, seed, 0.8,
         )
-        _, _, val_metrics, _ = bt.build_and_train(
-            combo=combo_tuple,
-            X_pool=X_pool, y_pool=y_pool,
-            train_idx=train_idx, val_idx=val_idx,
-            fp_dim=fp_dim, seed=seed,
-            config=config,
-        )
+        if trial is not None and i == 0:
+            _, _, val_metrics, _ = bt.build_and_train_with_pruning(
+                combo=combo_tuple,
+                X_pool=X_pool, y_pool=y_pool,
+                train_idx=train_idx, val_idx=val_idx,
+                fp_dim=fp_dim, seed=seed,
+                trial=trial,
+                config=config,
+            )
+        else:
+            _, _, val_metrics, _ = bt.build_and_train(
+                combo=combo_tuple,
+                X_pool=X_pool, y_pool=y_pool,
+                train_idx=train_idx, val_idx=val_idx,
+                fp_dim=fp_dim, seed=seed,
+                config=config,
+            )
         aucs.append(float(val_metrics["roc_auc"]))
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -152,26 +169,42 @@ def main():
     X_pool = prepare.build_feature_matrix(combo_tuple, pool_feats)
     print(f"[Data] pool size={len(pool_smiles)}  X_pool shape={X_pool.shape}")
 
+    # iter3: 5-seed mean objective to raise search SNR (vs prior 3-seed).
+    # Override the CLI-passed search_seeds inside objective so evaluate_hpo's
+    # frozen BUDGET (3 seeds) is not edited. The 2 extra seeds are taken from
+    # the confirm pool to keep search ⊂ confirm pattern consistent with
+    # pilot/iter1/iter2.
+    objective_seeds = [42, 100, 200, 300, 400]
+
     def objective(trial: optuna.Trial) -> float:
         cfg = suggest_config(trial)
         if args.search_num_epochs:
             cfg["num_epochs"] = args.search_num_epochs
         aucs = run_seeds(combo_tuple, X_pool, pool_labels, pool_smiles,
-                         prepare.FP_DIM, search_seeds, cfg)
+                         prepare.FP_DIM, objective_seeds, cfg, trial=trial)
         trial.set_user_attr("per_seed_val_auc", aucs)
         return float(np.mean(aucs))
 
-    sampler = TPESampler(seed=args.sampler_seed)
+    sampler = TPESampler(seed=args.sampler_seed, n_startup_trials=15, multivariate=True)
+    pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=5)
     study = optuna.create_study(
         direction="maximize",
         sampler=sampler,
+        pruner=pruner,
         study_name=args.study_name,
         storage=args.storage,
         load_if_exists=bool(args.storage),
     )
 
     t0 = time.time()
-    study.optimize(objective, n_trials=args.n_trials, show_progress_bar=False)
+    # Resume-aware: budget = args.n_trials *total* trials in the study, so when
+    # resuming after interruption we only run the remainder (zero if already done).
+    n_existing = len(study.trials)
+    remaining = max(0, args.n_trials - n_existing)
+    if n_existing:
+        print(f"[Search] study has {n_existing} existing trials; "
+              f"running {remaining} more to reach {args.n_trials}.")
+    study.optimize(objective, n_trials=remaining, show_progress_bar=False)
     search_min = (time.time() - t0) / 60.0
     print(f"\n[Search] done in {search_min:.1f} min "
           f"({len(study.trials)} trials)")
