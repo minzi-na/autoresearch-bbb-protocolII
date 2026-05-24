@@ -48,13 +48,18 @@ All commands below must use the combo string for your branch.
     that may override them)
 - Do **NOT** touch:
   - `best_train.py` — frozen iter-200 architecture + `build_and_train`
-    public API. Magic numbers already exposed via `BASE_CONFIG` and
-    constructor kwargs.
+    public API. New helpers (`*_with_pruning`) can be appended only
+    when an iter explicitly hooks pruning; existing public API stays
+    byte-identical so phase-1 paths reproduce.
   - `train.py` — phase-1 active file, kept frozen for repro.
   - `prepare.py`, `evaluate_combo.py`, `final_holdout_eval.py`
   - `evaluate_hpo.py` — this iteration runner; its frozen `BUDGET`
     (n_trials=50, top_k=3, search_num_epochs=30, search/confirm seeds)
     is the single source of truth for fair iter comparison.
+  - `phase2_holdout_eval.py` — holdout eval runner used by step 8 of
+    the iteration loop. Frozen subset list (`nn05`, `total`) and the
+    "10-seed retrain at best confirm-trial HP" protocol must stay
+    stable across iters so the architecture_log column semantics hold.
   - data paths anywhere.
 - Edit `optuna_combo.py` with **partial Edit (old_string → new_string)**,
   never rewrite the whole file. Read the function first, then make a
@@ -65,7 +70,10 @@ All commands below must use the combo string for your branch.
 For each iteration `N`:
 
 1. Read `results/<combo>/hpo/results.tsv` last `keep=True` row (or the
-   phase-1 baseline if empty) to know the current threshold.
+   phase-1 baseline if empty) to know the current threshold. Also scan
+   the `note` column of prior rows (keep or discard) for HP-region
+   findings — agent should write these notes richly enough to inform
+   the next iter, even when the iter was reverted.
 2. Pick ONE search-design change. Examples:
    - narrow `lr` range based on previous study's top trials
    - swap `TPESampler` → `CmaEsSampler` for better local exploitation
@@ -81,17 +89,40 @@ For each iteration `N`:
 6. Run evaluation IN BACKGROUND:
    ```
    conda run -n rapids-25.02 python evaluate_hpo.py \
-     --combo <combo> --iter-id <N> --note "<short>"
+     --combo <combo> --iter-id <N> --note "<short>; top-region <one-line summary>; next: <hint>"
    ```
+   The `--note` value is the only place per-iter findings are recorded.
+   Pack it: design change + top-trial HP region one-liner + suggestion
+   for the next iter. This keeps the loop simple (one TSV, no extra
+   files) while preventing learning loss on discard.
    Use Bash with `run_in_background=true`. **Do NOT poll or stream output.**
    Wait for the completion notification, then read the appended TSV row.
    Expected wall-time: ~2 hours (50 trials × 3 search seeds × num_epochs=30
    + top-3 × 10 confirm seeds × num_epochs=50).
 7. Inspect the new row's `keep` field:
-   - `True`  → leave commit in place. Proceed to iter `N+1`.
-   - `False` → **`git revert <commit>` only.** Do NOT use `git reset --hard`.
-     The discarded commit must remain in history.
-8. The Optuna SQLite DB (`combo2_hpo.db` / per-worktree equivalent) is
+   - `True`  → leave commit in place.
+   - `False` → defer the `git revert` until **after** step 8 (holdout
+     eval needs the iter's HEAD == iter's design to retrain at the
+     correct HP). The discarded commit must remain in history. The
+     TSV row (including its rich `note`) stays — that's how findings
+     persist across reverts.
+8. **Holdout eval (every iter, keep or discard).** Run:
+   ```
+   conda run -n rapids-25.02 python phase2_holdout_eval.py \
+     --combo <combo> --iter-id <N> --note "<same note as step 6 or shorter>"
+   ```
+   Retrains 10 seeds at the iter's best confirm-trial HP and evaluates
+   on the `nn05` and `total` holdout subsets. Outputs:
+     - `results/<combo>/hpo/holdout_iter<NNNN>_<commit>.json` (full per-
+       seed + summary)
+     - one row appended to `results/<combo>/architecture_log.md` with
+       per-seed mean±std for AUC/MCC/Accuracy on both subsets.
+   Expected wall-time: ~30-40 min (10 seeds × num_epochs=50, single HP).
+   Use Bash with `run_in_background=true`; wait for completion notification.
+9. **Now apply the revert if step 7 was False:** `git revert <commit>`.
+   The holdout JSON + architecture_log row from step 8 remain on disk
+   even after the revert, so the iter's holdout signal stays accessible.
+10. The Optuna SQLite DB (`combo2_hpo.db` / per-worktree equivalent) is
    gitignored and grows with every iter. Don't delete it — it lets you
    inspect/replot any past study by study_name = `auto_iter<N>_<commit>`.
 
