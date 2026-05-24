@@ -24,16 +24,16 @@ All commands below must use the combo string for your branch.
 
 ## Decision rule (keep / discard)
 
-- **keep** iff `best_confirm_mean_val_auc > threshold_mean + threshold_std`
+- **keep** iff `best_confirm_mean_val_auc > threshold_mean`
   where the threshold is the max over:
     - iter-200 phase-1 baseline (`results/<combo>/results.tsv` best keep row)
     - all prior phase-2 keep rows in `results/<combo>/hpo/results.tsv`
-  with `threshold_std` taken from the same row.
 - **discard** otherwise → `git revert <commit>`. The discarded commit
   remains in history so the TSV row's commit hash always resolves.
-- The std buffer is intentional: confirm uses 10 fixed seeds, so even
-  a noise-only winner would clear the bare mean. Buffer = "beat by at
-  least one natural seed-variance".
+- No std buffer. `threshold_std` stays in the TSV for reference only —
+  use it (and the architecture_log holdout signal for the same iter)
+  as a secondary sanity check on marginal wins, but the keep gate
+  itself is just the mean comparison.
 
 ## Files
 
@@ -125,19 +125,9 @@ For each iteration `N`:
   family of change (e.g., 3 narrowing attempts in a row), switch to a
   qualitatively different design (e.g., change sampler instead of
   narrowing search space).
-- **Run ceiling:** absolute max of 40 iterations regardless of keep/
-  discard mix. If 40 reached without a definitive conclusion, summarize
+- **Run ceiling:** absolute max of 12 iterations regardless of keep/
+  discard mix. If 12 reached without a definitive conclusion, summarize
   and stop.
-- **Autonomy mode (iter3+ onward):** the agent chooses each iter's
-  design lever using prior iter `note` rows + study JSON top-region
-  summaries as guide, then runs the full loop (commit → evaluate_hpo →
-  holdout eval → keep/discard → revert if needed → next iter) without
-  per-iter user confirmation. User is alerted only on milestones:
-  a `keep=True` row, a 5-consecutive-discard early-termination trigger,
-  a forced direction switch (3 consecutive same-family discards), or
-  a hard failure (CUDA OOM, training divergence). The autonomy mode
-  does not change *what* is allowed — only *who* makes the per-iter
-  lever call (agent vs human).
 
 ## What CANNOT be optimized via this loop
 
@@ -167,7 +157,7 @@ When the loop terminates (convergence, ceiling, or human stop):
 
 From `results/maccs+scage1+mole/results.tsv` (iter198):
 - `mean_val_auc` = 0.852661 ± 0.003551 (10 scaffold seeds)
-- Threshold to beat (iter1 of phase2): **0.856212**
+- Threshold to beat (current keep rule, mean-only): **0.852661**
 
 From the manual coarse pilot (cbc41bd, before this loop):
 - Best confirm `mean_val_auc` = 0.852262 ± 0.003839

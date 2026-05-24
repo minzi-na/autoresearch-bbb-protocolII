@@ -11,13 +11,14 @@ For each phase-2 iteration the autoresearch agent:
        False -> git revert <commit>, proceed to iter N+1
 
 Decision rule (keep):
-  best_confirm_mean_val_auc > threshold_mean + threshold_std
+  best_confirm_mean_val_auc > threshold_mean
 where:
   threshold = max over (iter-200 phase-1 baseline, prior phase-2 keeps)
-              of (confirm_mean, confirm_std).
+              of confirm_mean.
 
-The std buffer reflects 10-seed natural variation; without it noise
-would let many studies "win" by random reorder.
+The std buffer was dropped (user preference). std stays in the TSV
+for reference only. Marginal wins (close to threshold) should be
+cross-checked against the architecture_log holdout signal.
 
 Usage:
     conda run -n rapids-25.02 python evaluate_hpo.py \\
@@ -109,8 +110,10 @@ def load_hpo_tsv(combo: str) -> pd.DataFrame:
 
 
 def current_threshold(combo: str) -> tuple[float, float, str]:
-    """Return (threshold_mean, threshold_std, source) the new study must beat
-    by more than threshold_std to be kept."""
+    """Return (threshold_mean, threshold_std, source). The new study's
+    best_confirm_mean_val_auc must beat threshold_mean to be kept.
+    threshold_std is recorded for reference only (the buffer was
+    dropped from the keep rule)."""
     base_mean, base_std = phase1_baseline(combo)
     df = load_hpo_tsv(combo)
     keeps = df[df["keep"] == True]  # noqa: E712
@@ -161,9 +164,8 @@ def main():
     print(f"[Plan] study_name={study_name}")
     print(f"[Plan] budget={BUDGET}")
     print(f"[Plan] threshold_mean={threshold_mean:.6f}  "
-          f"threshold_std={threshold_std:.6f}  (source={src})")
-    print(f"[Plan] keep iff best_confirm_mean > "
-          f"{threshold_mean + threshold_std:.6f}")
+          f"(std_for_reference={threshold_std:.6f}; source={src})")
+    print(f"[Plan] keep iff best_confirm_mean > {threshold_mean:.6f}")
 
     pre_jsons = list_study_jsons(args.combo)
 
@@ -212,7 +214,12 @@ def main():
     confirm_std       = float(best_confirm["confirm_std_val_auc"])
     confirm_trial     = int(best_confirm["trial"])
 
-    keep = bool(confirm_mean > threshold_mean + threshold_std)
+    # Decision rule (simplified): mean-only beat-by-any-margin. The std
+    # buffer was dropped — user preference; std stays in the TSV for
+    # information only. Note: under this rule small-effect / noise-level
+    # gains can pass; the architecture_log holdout signal is the
+    # secondary check for any iter that lands in the marginal band.
+    keep = bool(confirm_mean > threshold_mean)
 
     print("\n" + "=" * 60)
     print(f"iter={args.iter_id}  commit={commit}  combo={args.combo}")
@@ -220,8 +227,8 @@ def main():
           f"mean_val_auc={best_search_val:.6f}")
     print(f"best confirm trial  #{confirm_trial}  "
           f"mean_val_auc={confirm_mean:.6f} ± {confirm_std:.6f}")
-    print(f"threshold (mean+std) {threshold_mean:.6f} + {threshold_std:.6f} "
-          f"= {threshold_mean + threshold_std:.6f}  (source={src})")
+    print(f"threshold (mean only) {threshold_mean:.6f}  "
+          f"(source={src}; std_for_reference={threshold_std:.6f})")
     print(f"wall time            {wall_min:.2f} min")
     print(f"DECISION             {'KEEP' if keep else 'DISCARD'}")
     print("=" * 60)
