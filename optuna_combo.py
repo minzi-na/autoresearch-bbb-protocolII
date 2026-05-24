@@ -35,7 +35,7 @@ import pandas as pd
 import torch
 import torch.utils.data as torch_data
 import optuna
-from optuna.samplers import TPESampler, CmaEsSampler
+from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
 
 from sklearn.metrics import (
@@ -229,22 +229,7 @@ def main():
         trial.set_user_attr("per_seed_val_auc", aucs)
         return float(np.mean(aucs))
 
-    # iter5: swap TPE -> CmaEsSampler for local exploitation.
-    # iter1/2/3 all hit deterministic trial#7 with TPE (same wide space,
-    # seed=0); iter4 narrowed around #7 still produced search-to-confirm
-    # overfit (5-seed 0.8539 -> 10-seed 0.8527 < iter3 0.8528). TPE
-    # appears trapped at trial#7 basin. CmaEs steps from the cluster mean
-    # with adapted covariance — better for refining a basin shape we
-    # already know is good. Categorical params (d_model/d_ffn/bs) fall
-    # back to an independent TPE sampler (Optuna default behavior).
-    sampler = CmaEsSampler(
-        seed=args.sampler_seed,
-        n_startup_trials=15,
-        independent_sampler=TPESampler(
-            seed=args.sampler_seed, n_startup_trials=15, multivariate=True,
-        ),
-        warn_independent_sampling=False,
-    )
+    sampler = TPESampler(seed=args.sampler_seed, n_startup_trials=15, multivariate=True)
     pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=5)
     study = optuna.create_study(
         direction="maximize",
