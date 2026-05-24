@@ -94,6 +94,15 @@ BASE_CONFIG = {
     "mod_drop_p":          0.1,
     "head_dropout":        0.08,
     "grad_clip_max_norm":  1.0,
+    # Phase-2 iter7+: training-procedure HP. ALL defaults are chosen so
+    # build_and_train(config=None) reproduces the phase-1 iter198
+    # baseline byte-for-byte (no scheduler, no smoothing, the same EMA
+    # decay 0.999 that was hardcoded in train_model before this change).
+    "lr_schedule":         "constant",  # "constant" / "cosine" / "warmup_cosine"
+    "lr_warmup_epochs":    0,           # int >= 0; ignored when schedule="constant"
+    "lr_min_ratio":        0.0,         # cosine eta_min = lr * lr_min_ratio
+    "label_smoothing":     0.0,         # BCE target smoothing in [0, 1)
+    "ema_decay":           0.999,       # was hardcoded in train_model; now overridable
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -274,7 +283,8 @@ class MultiModalGMLPFromFlat(nn.Module):
 
 def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc",
-                grad_clip_max_norm=1.0):
+                grad_clip_max_norm=1.0, scheduler=None,
+                ema_decay=0.999, label_smoothing=0.0):
     if es_metric == "val_loss":
         best_score = float("inf")
         is_better  = lambda new, cur: new < cur
@@ -289,7 +299,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     bad = 0
     epoch_log = []
 
-    ema_decay = 0.999
+    # ema_decay is now caller-provided (default 0.999 reproduces phase-1).
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     for epoch in range(num_epochs):
@@ -297,8 +307,14 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
+            # iter7+: optional label smoothing. label_smoothing=0.0 means
+            # the targets are untouched -> phase-1 byte-identical BCE.
+            if label_smoothing > 0.0:
+                y_target = y * (1.0 - label_smoothing) + 0.5 * label_smoothing
+            else:
+                y_target = y
             optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            loss = loss_fn(model(x), y_target)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip_max_norm)
             optimizer.step()
@@ -351,6 +367,12 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             bad += 1
             if bad >= patience:
                 break
+
+        # iter7+: LR scheduler step at epoch end. scheduler=None is the
+        # default (-> phase-1 byte-identical: no LR change). When set
+        # (cosine / warmup_cosine), step() advances the schedule.
+        if scheduler is not None:
+            scheduler.step()
 
     if best_state is not None:
         model.load_state_dict(best_state)
@@ -496,6 +518,7 @@ def build_and_train(
         lr=cfg["lr"],
     )
     loss_fn = nn.BCEWithLogitsLoss()
+    scheduler = _build_lr_scheduler(optimizer, cfg)
 
     model, train_info = train_model(
         model, optimizer, train_loader, val_loader, loss_fn,
@@ -503,10 +526,62 @@ def build_and_train(
         patience=cfg["patience"],
         es_metric=cfg["es_metric"],
         grad_clip_max_norm=cfg["grad_clip_max_norm"],
+        scheduler=scheduler,
+        ema_decay=cfg.get("ema_decay", 0.999),
+        label_smoothing=cfg.get("label_smoothing", 0.0),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
     return model, train_info, val_metrics, scaler
+
+
+def _build_lr_scheduler(optimizer, cfg: dict):
+    """Construct an LR scheduler from the phase-2 BASE_CONFIG keys.
+
+    Returns None when cfg["lr_schedule"] == "constant" so the training
+    loop's `if scheduler is not None: scheduler.step()` skips entirely
+    and behaves byte-identical to phase-1.
+
+    Supported schedules:
+      - "constant"      -> None (phase-1 default).
+      - "cosine"        -> CosineAnnealingLR over num_epochs.
+                            eta_min = lr * lr_min_ratio.
+      - "warmup_cosine" -> linear warmup over lr_warmup_epochs (lr_i/warmup),
+                            then cosine annealing on the remainder down to
+                            lr * lr_min_ratio.
+    """
+    schedule = cfg.get("lr_schedule", "constant")
+    if schedule == "constant":
+        return None
+
+    num_epochs = int(cfg["num_epochs"])
+    min_ratio  = float(cfg.get("lr_min_ratio", 0.0))
+
+    if schedule == "cosine":
+        from torch.optim.lr_scheduler import CosineAnnealingLR
+        lr0 = float(cfg["lr"])
+        eta_min = lr0 * min_ratio
+        return CosineAnnealingLR(optimizer, T_max=max(1, num_epochs),
+                                 eta_min=eta_min)
+
+    if schedule == "warmup_cosine":
+        from torch.optim.lr_scheduler import LambdaLR
+        import math
+        warmup = int(cfg.get("lr_warmup_epochs", 0))
+        total = max(1, num_epochs)
+
+        def lr_lambda(epoch: int) -> float:
+            if warmup > 0 and epoch < warmup:
+                # Linear warmup from 1/warmup -> 1.0 over `warmup` epochs.
+                return float(epoch + 1) / float(warmup)
+            # Cosine annealing from 1.0 -> min_ratio over the remainder.
+            progress = (epoch - warmup) / max(1, total - warmup)
+            progress = min(1.0, max(0.0, progress))
+            return min_ratio + (1.0 - min_ratio) * 0.5 * (1.0 + math.cos(math.pi * progress))
+
+        return LambdaLR(optimizer, lr_lambda)
+
+    raise ValueError(f"Unknown lr_schedule: {schedule!r}")
 
 
 def apply_rdkit_scaler(X: np.ndarray, combo, fp_dim: dict, scaler):
@@ -546,7 +621,8 @@ def apply_rdkit_scaler(X: np.ndarray, combo, fp_dim: dict, scaler):
 def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn,
                              trial,
                              num_epochs=50, patience=10, es_metric="val_auc",
-                             grad_clip_max_norm=1.0):
+                             grad_clip_max_norm=1.0, scheduler=None,
+                             ema_decay=0.999, label_smoothing=0.0):
     """Mirror of train_model with Optuna pruning. Reports best-so-far score
     each epoch and raises TrialPruned if the pruner says so."""
     import optuna
@@ -565,7 +641,7 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
     bad = 0
     epoch_log = []
 
-    ema_decay = 0.999
+    # ema_decay is now caller-provided (default 0.999 reproduces phase-1).
     ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     for epoch in range(num_epochs):
@@ -573,8 +649,14 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
         tr_loss_sum, tr_batches = 0.0, 0
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
+            # iter7+: optional label smoothing. label_smoothing=0.0 means
+            # the targets are untouched -> phase-1 byte-identical BCE.
+            if label_smoothing > 0.0:
+                y_target = y * (1.0 - label_smoothing) + 0.5 * label_smoothing
+            else:
+                y_target = y
             optimizer.zero_grad()
-            loss = loss_fn(model(x), y)
+            loss = loss_fn(model(x), y_target)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip_max_norm)
             optimizer.step()
@@ -634,6 +716,11 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
         trial.report(float(reported), step=epoch)
         if trial.should_prune():
             raise optuna.TrialPruned()
+
+        # iter7+: LR scheduler step at epoch end. scheduler=None is the
+        # default (-> phase-1 byte-identical: no LR change).
+        if scheduler is not None:
+            scheduler.step()
 
     if best_state is not None:
         model.load_state_dict(best_state)
@@ -717,6 +804,7 @@ def build_and_train_with_pruning(
         lr=cfg["lr"],
     )
     loss_fn = nn.BCEWithLogitsLoss()
+    scheduler = _build_lr_scheduler(optimizer, cfg)
 
     model, train_info = train_model_with_pruning(
         model, optimizer, train_loader, val_loader, loss_fn,
@@ -725,6 +813,9 @@ def build_and_train_with_pruning(
         patience=cfg["patience"],
         es_metric=cfg["es_metric"],
         grad_clip_max_norm=cfg["grad_clip_max_norm"],
+        scheduler=scheduler,
+        ema_decay=cfg.get("ema_decay", 0.999),
+        label_smoothing=cfg.get("label_smoothing", 0.0),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
