@@ -120,8 +120,11 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "weight_decay":  trial.suggest_float("weight_decay", 5e-7, 1e-5, log=True),
         "dropout":       trial.suggest_float("dropout", 0.0, 0.10),
         "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
-        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.15),
-        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.15),
+        # iter16: extend mod_drop_p / head_dropout upper to probe edge
+        # (iter11 trial#21 had mod_drop_p=0.114 at 76 % of the 0..0.15
+        # upper, suggesting the optimum may lie outside the box).
+        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.25),
+        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.25),
         # ─── Pinned at iter3 trial#7 architecture HP ─────────────────────
         "batch_size":          128,
         "grad_clip_max_norm":  1.1357825728372695,
