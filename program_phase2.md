@@ -165,9 +165,11 @@ For each iteration `N`:
   family of change (e.g., 3 narrowing attempts in a row), switch to a
   qualitatively different design (e.g., change sampler instead of
   narrowing search space).
-- **Run ceiling:** absolute max of 12 iterations regardless of keep/
-  discard mix. If 12 reached without a definitive conclusion, summarize
-  and stop.
+- **Run ceiling:** absolute max of 18 iterations regardless of keep/
+  discard mix. If 18 reached without a definitive conclusion, summarize
+  and stop. (Originally 12, extended to 18 from iter11+ to allow a
+  bbb-combo1-style narrowing cycle of 5-6 iter on the iter10 low-wd
+  cluster before declaring plateau.)
 - **Autonomy (default for this loop):** the agent chooses each iter's
   design lever using prior iter `note` rows + study JSON top-region
   summaries + architecture_log holdout signal as guide, then runs the
