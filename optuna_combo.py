@@ -100,38 +100,34 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter12: open architecture HP as a RANGE-PIN (not single-value pin),
-    while keeping the iter10/iter11 low-wd / low-dropout cluster for
-    the optimizer/regularisation HP. iter8-11 hard-pinned d_model=512,
-    d_ffn=1536, depth=5 at iter3 trial#7 values, which left the sampler
-    only 6 continuous dims to explore — too restrictive (cf bbb-combo1
-    run17 where adding d_ffn=1536 as a categorical option produced the
-    largest single-iter val gain of the whole loop). iter12 re-exposes
-    these as small categorical / int ranges so 30 trials can sweep
-    architecture variants WITHIN the proven cluster:
-      - d_model: [512, 768] (drop 384 — never best in iter1-7)
-      - d_ffn:   [1024, 1536, 2048, 3072] (extends BEYOND iter1-7's
-        max 1536 — bbb-combo1 had run17 d_ffn jump too)
-      - depth:   [4, 5, 6, 7] (extends BEYOND iter1-7's max 6)
+    iter10: shift search to the LOW-wd / LOW-dropout cluster that
+    iter1-9 never explored. bbb-combo1's phase-2 winning region (run13
+    -> run28 narrowing chain) was at dropout 0.04-0.06, lr ~1e-4,
+    wd ~3e-6. Our wd range 1e-6..1e-3 nominally included it but TPE
+    deterministically landed at wd~1.5e-4 every iter (iter3 trial#7),
+    so the wd<<1e-5 cluster was never sampled.
 
-    Continuous HP stay in the iter10 cluster region. Training-procedure
-    HP stay at phase-1 defaults (this iter does not lever them).
+    This iter restricts the search to the bbb-combo1-style cluster and
+    pins the structural / training-procedure HP at iter3 trial#7 +
+    phase-1 defaults. The 6-D box is small enough for 30 trials to do
+    dense exploitation. If a low-wd / low-dropout combination exists
+    that exceeds iter3 trial#7's val 0.852850, iter10 finds it; if
+    not, the cluster is empirically ruled out for combo2.
     """
     return {
-        # ─── Architecture HP: RANGE PIN (not single-value pin) ───────────
-        "d_model":   trial.suggest_categorical("d_model", [512, 768]),
-        "d_ffn":     trial.suggest_categorical("d_ffn", [1024, 1536, 2048, 3072]),
-        "depth":     trial.suggest_int("depth", 4, 7),
-        # ─── iter10 cluster region (optimizer / regularisation) ──────────
+        # ─── Searched in iter10 (6-D narrow on low-wd / low-dropout) ─────
         "lr":            trial.suggest_float("lr", 5e-5, 1.5e-4, log=True),
         "weight_decay":  trial.suggest_float("weight_decay", 5e-7, 1e-5, log=True),
         "dropout":       trial.suggest_float("dropout", 0.0, 0.10),
         "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
         "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.15),
         "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.15),
-        # ─── Pinned at iter3 trial#7 ─────────────────────────────────────
+        # ─── Pinned at iter3 trial#7 architecture HP ─────────────────────
         "batch_size":          128,
         "grad_clip_max_norm":  1.1357825728372695,
+        "d_model":             512,
+        "d_ffn":               1536,
+        "depth":               5,
         # ─── Pinned at phase-1 defaults (training-procedure HP off) ──────
         "lr_schedule":      "constant",
         "lr_warmup_epochs": 0,
@@ -231,18 +227,19 @@ def main():
     X_pool = prepare.build_feature_matrix(combo_tuple, pool_feats)
     print(f"[Data] pool size={len(pool_smiles)}  X_pool shape={X_pool.shape}")
 
-    # iter12+: 5-seed EVENLY SPREAD over the confirm pool to remove the
-    # first-half bias of all earlier search seed pools. iter3..iter10
-    # used [42,100,200,300,400] = first half of confirm. iter11 bumped
-    # to 7-seed [42,100,200,300,400,500,600] which kept the same bias
-    # while costing 40 % more wall-time per trial. The right fix is
-    # *coverage*, not *count*: 5 seeds at stride 200 in confirm pool
-    # [42..900] gives an UNBIASED estimator of the 10-seed confirm mean
-    # at the same 5-seed budget. This should tighten search-to-confirm
-    # correlation more than a same-bias 7-seed.
+    # iter11: bump objective seeds 5 -> 7 to reduce iter10's
+    # search-to-confirm overfit. iter10's top trials all showed
+    # search val 0.8544..0.8548 collapse to confirm 0.8520..0.8523 on
+    # the same low-wd / low-dropout cluster — search SNR was too low to
+    # distinguish HP that overfit the 5 search seeds from HP that
+    # generalise across the full 10-seed confirm pool. Adding seeds 500
+    # and 600 (also from the confirm pool, so search ⊂ confirm pattern
+    # is preserved) gives the sampler a 7-seed mean signal instead of
+    # 5-seed.
     #
-    # Confirm seeds [42, 100, ..., 900] are unchanged.
-    objective_seeds = [42, 200, 400, 600, 800]
+    # iter3 (kept) used 5 seeds [42,100,200,300,400]; iter11 uses
+    # [42,100,200,300,400,500,600].
+    objective_seeds = [42, 100, 200, 300, 400, 500, 600]
 
     def objective(trial: optuna.Trial) -> float:
         cfg = suggest_config(trial)
