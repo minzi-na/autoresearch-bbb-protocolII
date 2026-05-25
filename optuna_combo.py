@@ -115,27 +115,20 @@ def suggest_config(trial: optuna.Trial) -> dict:
     not, the cluster is empirically ruled out for combo2.
     """
     return {
-        # ─── iter14: narrow exploitation around iter11 trial#21 ─────────
-        # iter11 KEEP trial#21:
-        #   lr=1.22e-4, wd=1.14e-6, dropout=0.047, drop_path=0.029,
-        #   mod_drop_p=0.114, head_dropout=0.086.
-        # iter14 tightens each range to a small band centred on trial#21
-        # (roughly ±1x order on log axes, ±0.02-0.05 on continuous).
-        # bbb-combo1 run17->18 narrow cycle pattern: 30 trials dense
-        # exploitation of the proven cluster.
-        "lr":            trial.suggest_float("lr", 1.0e-4, 1.4e-4, log=True),
-        "weight_decay":  trial.suggest_float("weight_decay", 5e-7, 3e-6, log=True),
-        "dropout":       trial.suggest_float("dropout", 0.02, 0.08),
-        "drop_path":     trial.suggest_float("drop_path", 0.01, 0.05),
-        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.05, 0.15),
-        "head_dropout":  trial.suggest_float("head_dropout", 0.03, 0.13),
-        # ─── Pinned at iter3 trial#7 architecture HP (iter11 KEEP) ──────
+        # ─── Searched in iter10 (6-D narrow on low-wd / low-dropout) ─────
+        "lr":            trial.suggest_float("lr", 5e-5, 1.5e-4, log=True),
+        "weight_decay":  trial.suggest_float("weight_decay", 5e-7, 1e-5, log=True),
+        "dropout":       trial.suggest_float("dropout", 0.0, 0.10),
+        "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
+        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.15),
+        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.15),
+        # ─── Pinned at iter3 trial#7 architecture HP ─────────────────────
         "batch_size":          128,
         "grad_clip_max_norm":  1.1357825728372695,
         "d_model":             512,
         "d_ffn":               1536,
         "depth":               5,
-        # ─── Pinned at phase-1 defaults (training-procedure HP off) ─────
+        # ─── Pinned at phase-1 defaults (training-procedure HP off) ──────
         "lr_schedule":      "constant",
         "lr_warmup_epochs": 0,
         "lr_min_ratio":     0.0,
