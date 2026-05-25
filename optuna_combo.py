@@ -35,7 +35,7 @@ import pandas as pd
 import torch
 import torch.utils.data as torch_data
 import optuna
-from optuna.samplers import TPESampler, CmaEsSampler
+from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
 
 from sklearn.metrics import (
@@ -250,29 +250,7 @@ def main():
         trial.set_user_attr("per_seed_val_auc", aucs)
         return float(np.mean(aucs))
 
-    # iter15: CmaEsSampler on iter11/iter14 low-wd narrow region.
-    # iter14 (narrow exploitation around iter11 trial#21, TPE) plateaued
-    # at val 0.852420 < threshold 0.852878 — TPE failed to find a
-    # better point inside the trial#21 neighbourhood. iter15 swaps the
-    # sampler family (TPE -> CmaEs) on the SAME narrow region; CmaEs
-    # uses covariance-aware steps from the cluster mean and is
-    # structurally different from TPE's density-based selection. If
-    # iter11 trial#21 sits at the centre of a real basin, CmaEs's
-    # gradient-like steps should refine it; if the basin is flat,
-    # iter15 confirms the plateau under a different sampler family
-    # (single-lever direction switch from space-family iter13/14 to
-    # sampler-family iter15, avoiding the 3-consec-space trigger).
-    # Categorical/int params (none active in this iter: arch is pinned,
-    # all 6 searched HP are continuous) fall back to an independent
-    # TPE sampler — kept here as defensive boilerplate.
-    sampler = CmaEsSampler(
-        seed=args.sampler_seed,
-        n_startup_trials=15,
-        independent_sampler=TPESampler(
-            seed=args.sampler_seed, n_startup_trials=15, multivariate=True,
-        ),
-        warn_independent_sampling=False,
-    )
+    sampler = TPESampler(seed=args.sampler_seed, n_startup_trials=15, multivariate=True)
     pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=5)
     study = optuna.create_study(
         direction="maximize",
