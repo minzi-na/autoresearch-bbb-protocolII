@@ -2,183 +2,193 @@
 
 ## Summary
 
-- **Iterations run**: 9 (ceiling 12; self-terminated after 6 consecutive
-  val-discards iter4-9, with the loop's main lever — training-procedure
-  HP via best_train.py BASE_CONFIG extension — fully exercised).
-- **Distribution**: 1 KEEP (iter3), 8 DISCARD (iter1/2/4/5/6/7/8/9).
-- **Phase-2 best (val rule)**: **iter3 trial#7** (commit `a539a46706`,
-  study `auto_iter003_a539a46706`). Same HP was deterministically
-  rediscovered by iter1/2/5/6 under different sampler / pruner /
-  search-space settings — strong evidence that this point is the robust
-  peak of the original 11-D HP search space.
-- **Holdout-side finding (iter7+)**: opening the training-procedure axis
-  via BASE_CONFIG extension (LR schedule + label smoothing + ema_decay)
-  produced the **first phase-2 iter whose top-3 confirm trials beat
-  phase-1 iter198 on holdout per-seed mean roc_auc** (iter8). The
-  effect did NOT transfer back to val_AUC, so iter8 was DISCARD under
-  the val-only keep rule, but it is the meaningful generalisation
-  landmark of the loop.
+- **Iterations run**: 16 (ceiling 18; self-terminated at iter16 by the
+  5-consecutive-discard convergence trigger).
+- **Distribution**: 2 KEEP (iter3, iter11), 14 DISCARD.
+- **Phase-2 best (val rule)**: **iter11 trial#21** (commit `78fd984a82`,
+  study `auto_iter011_78fd984a82`). lr=1.22e-4, wd=1.14e-6, dropout=
+  0.047, drop_path=0.029, mod_drop_p=0.114, head_dropout=0.086, with
+  arch d_model=512 / d_ffn=1536 / depth=5 (latter is the iter3
+  trial#7 architecture). Lives in the bbb-combo1-style low-wd /
+  low-dropout cluster.
+- **Generalisation landmark**: iter8 trial#1/#3 — DISCARD under val
+  rule but the only phase-2 configurations whose top-3 confirm trials
+  BEAT phase-1 iter198 on holdout per-seed mean roc_auc (both nn05
+  and total).
+- **End state**: val improvement +0.000217 over phase-1 (paired test
+  noise), holdout near-parity with phase-1 (slight nn05 regression in
+  the val winner, total parity).
 
-## Phase-1 baseline vs phase-2 winners
+## Phase-1 baseline vs Phase-2 winners
 
-Three rows worth tracking — the val-rule winner (iter3 trial#7) and the
-two holdout-best trials from iter8 (which DISCARDed by val but are the
-phase-1-beating holdout configurations).
+Three rows worth tracking — the val-rule winner (iter11 trial#21), the
+prior val-rule winner (iter3 trial#7, kept under the same rule), and
+the holdout landmark (iter8 trial#1).
 
 | Source | val ROC-AUC | nn05 ROC-AUC | total ROC-AUC | keep? |
 |---|---|---|---|---|
-| phase-1 iter198 (baseline) | 0.852661 ± 0.003551 | 0.870011 ± 0.008095 | 0.879823 ± 0.004205 | — |
-| **iter3 trial#7** (val winner, KEEP) | **0.852850 ± 0.002940** | 0.866288 ± 0.007562 | 0.878848 ± 0.002268 | True |
-| iter8 trial#1 (holdout-best val side) | 0.852397 ± 0.004151 | **0.870585 ± 0.007292** | **0.880124 ± 0.004112** | False |
-| iter8 trial#3 (holdout-best nn05) | 0.852350 ± 0.004037 | **0.871329** ± ... | **0.880122** ± ... | False |
-| iter8 trial#24 (holdout-best total) | 0.850348 ± 0.003531 | 0.865780 ± ... | **0.880566** ± ... | False |
-| iter9 trial#0 (narrow re-exploit) | 0.851036 ± 0.003763 | 0.868241 ± 0.008708 | 0.881157 ± 0.004093 | False |
+| phase-1 iter198 (baseline) | 0.852661 ± 0.003551 | **0.870011 ± 0.008095** | **0.879823 ± 0.004205** | — |
+| iter3 trial#7 (val winner v1) | 0.852850 ± 0.002940 | 0.866288 ± 0.007562 | 0.878848 ± 0.002268 | True |
+| **iter11 trial#21** (val winner v2, FINAL) | **0.852878 ± 0.003240** | 0.868296 ± 0.006449 | 0.879793 ± 0.003691 | **True** |
+| iter8 trial#1 (holdout landmark) | 0.852397 ± 0.004151 | **0.870585 ± 0.007292** | **0.880124 ± 0.004112** | False |
+| iter8 trial#3 (holdout best nn05) | 0.852350 ± 0.004037 | **0.871329** ± ... | 0.880122 ± ... | False |
 
-### Statistical test (iter3 trial#7 vs phase-1 iter198 on val, same 10 seeds)
+### Statistical test (iter11 trial#21 vs phase-1, same 10 seeds)
 
-Paired t-test: **t = 0.154, p (two-sided) = 0.881**; Wilcoxon signed-rank
-one-sided p = 0.577. Indistinguishable from noise.
+Threshold gap: +0.000217 (val), nn05 −0.0017, total −0.00003. Same
+noise band as the iter3-vs-phase-1 comparison. Effect on val is not
+statistically distinguishable from sampling noise.
 
 ### Reading
 
-- **val**: only iter3 trial#7 exceeds phase-1 mean, by a noise-level
-  margin (+0.000189). All other 8 iter DISCARD or DISCARD-with-revert.
-- **holdout AUC (phase-2 vs phase-1)**:
-  - iter3 trial#7 (val winner) regresses slightly on both subsets.
-  - iter8 trial#1/#3 are the FIRST configurations to beat phase-1 on
-    both nn05 (+0.0006 / +0.0013) and total (+0.0003 / +0.0003).
-    The training-procedure HP they exercise are
-    *small label_smoothing (0.01-0.06)* + *ema_decay 0.994-0.9994*
-    + *either constant or cosine schedule*.
-  - iter9 narrowed the search to this region but actually degraded
-    nn05 (sampler concentrated near the corner of the box where
-    label_smoothing=0 / ema≈0.999, i.e. close to the phase-1 default,
-    losing the holdout edge).
+- **val rule**: phase-2 produced two KEEPs, both within the
+  measurement-noise band of phase-1. The val gate is decisive about
+  the trial selection but the magnitude is small.
+- **Two robust HP regions** in combo2: (a) iter3 trial#7 at high-wd
+  (1.5e-4) / high-dropout (0.243), (b) iter11 trial#21 at low-wd
+  (1.14e-6) / low-dropout (0.047). The two clusters give nearly
+  identical confirm val 0.852850 vs 0.852878 — the val landscape has
+  a flat plateau between them.
+- **Holdout signal** is best at iter8 trial#1/#3 (low-wd cluster but
+  with non-zero training-procedure HP — cosine LR + small label
+  smoothing). These DISCARD by val rule but are the only phase-2
+  configurations that strictly beat phase-1 on both nn05 and total.
 
-## Winning HP configuration (val rule)
+## Winning HP configuration (val rule, iter11 trial#21)
 
-iter3 trial#7 — what the phase-2 KEEP row records:
+| param | iter11 trial#21 | iter3 trial#7 | phase-1 BASE_CONFIG | bbb-combo1 cluster |
+|---|---|---|---|---|
+| lr                 | **1.224e-04** | 1.502e-04 | 1.000e-04 | ~1.1e-04 |
+| **weight_decay**   | **1.145e-06** | 1.499e-04 | 1.000e-05 | ~3-4e-6 |
+| **dropout**        | **0.047**     | 0.243     | 0.200     | 0.04-0.06 |
+| drop_path          | 0.029         | 0.002     | 0.025     | — |
+| mod_drop_p         | 0.114         | 0.090     | 0.100     | — |
+| head_dropout       | 0.086         | 0.198     | 0.080     | — |
+| batch_size         | 128           | 128       | 128       | 128 |
+| grad_clip_max_norm | 1.136         | 1.136     | 1.000     | — |
+| d_model            | 512           | 512       | 512       | 512 |
+| d_ffn              | 1536          | 1536      | 1048      | 1048 |
+| depth              | 5             | 5         | 4         | — |
+| lr_schedule        | constant      | constant  | constant  | constant |
+| label_smoothing    | 0.0           | 0.0       | 0.0       | 0.0 |
+| ema_decay          | 0.999         | 0.999     | 0.999     | — |
 
-| param | value | vs phase-1 BASE_CONFIG |
-|---|---|---|
-| lr                 | 1.502e-04 | 1.000e-04 (×1.50) |
-| weight_decay       | 1.499e-04 | 1.000e-05 (×15.0) |
-| batch_size         | 128       | 128 (same) |
-| grad_clip_max_norm | 1.136     | 1.000 (×1.14) |
-| dropout            | 0.243     | 0.200 (+0.043) |
-| drop_path          | 0.0019    | 0.025 (−0.023) |
-| mod_drop_p         | 0.090     | 0.100 (−0.010) |
-| head_dropout       | 0.198     | 0.080 (×2.5)  |
-| d_model            | 512       | 512 (same) |
-| d_ffn              | 1536      | 1048 (×1.47) |
-| depth              | 5         | 4 (+1) |
-| lr_schedule        | constant  | constant (phase-1) |
-| label_smoothing    | 0.0       | 0.0 (phase-1) |
-| ema_decay          | 0.999     | 0.999 (phase-1) |
-
-Training-procedure HP at phase-1 defaults — iter3 is purely an HP shift
-in the original 11-D block.
-
-## Generalisation-side configuration (holdout landmark)
-
-iter8 trial#1 — same architecture HP as iter3 trial#7 (pinned), but with
-training-procedure HP turned on:
-
-| param | value | note |
-|---|---|---|
-| (11 architecture HP)| iter3 trial#7 values | pinned |
-| lr_schedule        | cosine    | active |
-| lr_warmup_epochs   | 8         | (sampled but ignored; cosine has no warmup) |
-| lr_min_ratio       | 0.159     | cosine eta_min = lr × 0.159 |
-| label_smoothing    | 0.057     | small BCE smoothing |
-| ema_decay          | 0.9992    | ≈ phase-1 0.999 |
-
-Beats phase-1 on both holdout subsets per-seed mean, but DISCARD under
-val rule (val 0.852397 < threshold 0.852850).
+iter11 trial#21 sits in the bbb-combo1 winning cluster (low-wd /
+low-dropout). The two phase-2 KEEPs differ on every continuous HP
+except batch_size / grad_clip / arch — they are TWO distinct optima
+that combo2's val landscape supports equally well.
 
 ## What was tried (lever × outcome)
 
 | iter | design (single lever) | family | confirm val | keep | takeaway |
 |---|---|---|---|---|---|
 | 1 | structural narrow (drop d_model/d_ffn/depth from search) | space | 0.852668 | False* | TPE wide converges on trial#7 |
-| 2 | + MedianPruner + TPE n_startup=15 multivariate | pruner+sampler | 0.852850 | False* | same trial#7; pruner is wall-time tool |
-| 3 | + 5-seed mean objective | objective | **0.852850** | **True** | first val gain over phase-1 (+0.000189) |
-| 4 | search space narrowed around trial#7 | space | 0.852740 | False | search-to-confirm overfit |
-| 5 | sampler TPE → CmaEsSampler | sampler | 0.852850 (=#7 HP) | False | CmaEs rediscovers trial#7 exact HP |
-| 6 | pruner MedianPruner → NopPruner | pruner | 0.852850 (=#7 HP) | False | full-epoch eval doesn't surface any late-bloomer |
-| 7 | BASE_CONFIG extension (lr_schedule + label_smoothing + ema_decay), full 16-D search | best_train.py | 0.851604 | False | 16-D / 30 trials too sparse; sub-optimal HP combo |
-| 8 | pin 11 HP at trial#7, search ONLY the 5 new training-procedure HP | best_train.py + space-restrict | 0.852397 | False | **HOLDOUT BREAKTHROUGH**: top-3 of 3 beat phase-1 on holdout; val noise |
-| 9 | narrow 4-D around iter8 top region | space | 0.851036 | False | narrow degrades both val and nn05; total still beats P1 (mixed) |
+| 2 | + MedianPruner + TPE n_startup=15 multivariate | pruner+sampler | 0.852850 | False* | same trial#7 emerges |
+| 3 | + 5-seed mean objective | objective | **0.852850** | **True** | first val gain over phase-1 |
+| 4 | search space narrow around trial#7 | space | 0.852740 | False | search-to-confirm overfit |
+| 5 | sampler TPE → CmaEsSampler (wide) | sampler | 0.852850 (=#7 HP) | False | CmaEs rediscovers trial#7 exact HP |
+| 6 | pruner MedianPruner → NopPruner | pruner | 0.852850 (=#7 HP) | False | full-epoch doesn't change result |
+| 7 | BASE_CONFIG extension (lr_schedule + smoothing + ema), full 16-D | best_train.py | 0.851604 | False | 16-D / 30 trials too sparse |
+| 8 | pin 11 HP at trial#7, search ONLY the 5 new training-procedure HP | best_train.py + space-restrict | 0.852397 | False | **HOLDOUT BREAKTHROUGH** top-3 of 3 beat P1 |
+| 9 | narrow 4-D around iter8 top region | space | 0.851036 | False | narrow degrades |
+| 10 | shift to bbb-combo1 low-wd cluster (6-D) | space | 0.852306 | False | new cluster found; search-to-confirm overfit |
+| 11 | + 7-seed objective on low-wd cluster | objective | **0.852878** | **True** | **NEW BEST**: 7-seed picked robust trial#21 |
+| 12 | arch range pin + 5-seed evenly spread (bundled) | space + objective | 0.851858 | False | both levers hurt; can't disambiguate |
+| 13 | arch range pin alone (single-lever isolate) | space | 0.851858 | False | depth=5 critical; range pin lets sampler pick depth=6 worse |
+| 14 | narrow exploitation around iter11 trial#21 | space | 0.852420 | False | trial#21 is local peak; narrow box has no better trial |
+| 15 | sampler TPE → CmaEsSampler on low-wd region | sampler | 0.851744 | False | CmaEs worse than TPE here |
+| 16 | mod_drop_p / head_dropout upper extend 0.15 → 0.25 | space | 0.852282 | False | edge probe fails; mod_drop_p=0.114 was a local peak not an edge signal |
 
-\* iter1/iter2 used the strict mean+1·std keep gate (later relaxed to
-mean-only at user request from iter3 onward). Under the mean-only gate
-iter1 (+0.000007) and iter2 (+0.000189) would have been marginal keeps,
-but both rows stay False in the TSV — we did not retroactively rewrite
-history.
+\* iter1/iter2 used the strict mean+1·std keep gate. Both rows stay
+False under the recorded rule; we did not retroactively rewrite history.
 
 ## Protocol evolution during the loop
 
 | change | iter | rationale |
 |---|---|---|
-| `*_with_pruning` helper allowed in best_train.py | iter2 | pruning needed a train_model hook |
+| `*_with_pruning` helper in best_train.py | iter2 | pruning needs a train_model hook |
 | Keep rule: mean+1·std → mean only | post-iter3 | std buffer too strict for noise-level landscape |
-| Ceiling 12 → 40 → 12 | post-iter3 / post-iter6 | 40 was too costly; restored to 12 |
-| Autonomy mode formalised | post-iter3 | agent chooses per-iter lever, user only on milestones |
-| BUDGET n_trials 50 → 30 | from iter5 | iter1-4 all converged on trial#7; trial-count cut is fair |
-| Inline holdout in confirm phase (no separate retrain) | from iter3 | aligns with bbb-combo1's val+holdout-in-one-reeval pattern |
-| **best_train.py BASE_CONFIG extension officially allowed** | post-iter6 | bbb-combo1-style training-procedure HP search needed beyond optuna_combo.py-only levers |
-| Section headers in best_train.py rewritten to phase-2 context | post-iter6 | source-of-truth doc + code agreement |
+| Ceiling 12 → 40 → 12 → 18 | iter3 / iter6 / iter11 | wall-time vs narrowing-cycle accommodation |
+| Autonomy mode formalised | post-iter3 | agent chooses per-iter lever |
+| BUDGET n_trials 50 → 30 | from iter5 | early iter all converged on trial#7 |
+| Inline holdout in confirm phase | from iter3 | bbb-combo1 pattern alignment |
+| best_train.py BASE_CONFIG extension officially allowed | post-iter6 | bbb-combo1-style training-procedure HP search |
+| best_train.py headers refreshed | iter11 prep | source-of-truth doc + code consistency |
+| ceiling 12 → 18 | iter11 prep | accommodate bbb-combo1-style 6-iter narrowing window |
 
-## Why the loop stopped at iter9
+## Why the loop stopped at iter16
 
-- Six consecutive val-DISCARD (iter4-9) reached the early-termination
+- **Five consecutive val-DISCARD** (iter12-16) hit the early-termination
   trigger from program_phase2.md.
-- The most informative new lever (iter7's BASE_CONFIG extension) was
-  exercised in iter7 (full 16-D), iter8 (5-D pinned), iter9 (4-D
-  narrow). iter8 surfaced the only phase-2 holdout improvement of the
-  whole loop, and iter9 confirmed that narrower exploitation of that
-  region degrades the signal — suggesting the iter8 finding is a
-  shallow plateau, not the foot of a deeper basin to descend into.
-- Remaining unexpolored levers (optimizer family, ES-metric swap,
-  patience tuning, alternative samplers) all have expected gain inside
-  the val noise band ≈ 0.003. Burning iter10-12 on them is unlikely to
-  beat the iter3 trial#7 threshold.
+- Across iter12-16 the levers exercised cover every realistic class:
+  - space (arch range, narrow exploitation, edge probe of regulariser
+    upper bounds);
+  - sampler (CmaEs swap);
+  - objective (5-seed evenly spread vs 7-seed first-half bias —
+    bundled in iter12 but isolated to be ineffective in iter13).
+  None beat iter11 trial#21's val 0.852878.
+- iter11 trial#21 is a true local peak of the low-wd cluster: every
+  narrow exploitation around it (iter14), every sampler-family switch
+  (iter15), every neighbour-region probe (iter16) plateaued at
+  val ≈ 0.852 — within one phase-1 std of iter11 KEEP.
+- The val landscape between the two robust clusters (iter3 trial#7
+  and iter11 trial#21) is flat. HP-tuning alone is unlikely to move
+  val outside the noise band.
 
 ## bbb-combo1 cross-reference
 
-bbb-combo1 phase-2 (40 iter, framework adopted here) ended with
-val +0.0028 over phase-1 but holdout −0.0046 — val win, holdout
-regress. combo2 phase-2 ended with val +0.0002 (noise) and a single
-iter (iter8) where holdout beat phase-1 on both subsets. The opposite
-asymmetry from bbb-combo1: combo2's strong landmark is on the
-generalisation side, but val gate kept it from being formally KEPT.
+bbb-combo1 phase-2 (40 iter, framework adopted here) achieved val
++0.00275 over phase-1 with holdout −0.0046 (regression). combo2
+phase-2 (16 iter) achieved val +0.000217 (noise level) with holdout
+near-parity. The asymmetry:
+
+- bbb-combo1's phase-1 reached val 0.87573 with 106 iter; phase-2's
+  6-iter narrowing chain (run13→18, drop=0.05 / lr=1e-4 / wd=3e-6
+  cluster) found the big +0.00135 jump (run17 d_ffn=1536). bbb-combo1's
+  combination of an earlier phase-1 stop AND a productive d_ffn switch
+  is what produced the val gain.
+- combo2's phase-1 ran 200 iter, leaving the architecture HP nearly
+  saturated; iter13 confirmed that re-opening d_ffn / depth ranges in
+  phase-2 picked architectures that confirm WORSE than the iter3 / iter11
+  single-pin (depth=5 is the productive value, range pin moves the
+  sampler to depth=6 and loses confirm val). The d_ffn lever that
+  worked for bbb-combo1 simply isn't available for combo2.
+
+What did transfer: the bbb-combo1 winning cluster region itself.
+combo2's iter10 / iter11 / iter14 confirmed a low-wd / low-dropout
+cluster exists for combo2 too — iter11 trial#21 lives in it. The cluster
+holds val ≈ phase-1 and holdout ≈ phase-1, but no narrowing inside it
+gave a productive jump.
 
 ## Artefacts
 
-- `results/<combo>/hpo/results.tsv` — 9 row history (iter1-9).
-- `results/<combo>/hpo/study_auto_iter003_a539a46706.json` carries the
-  val winner + full per-seed confirm + holdout block.
-- `results/<combo>/hpo/study_*_iter008_*.json` carries the holdout
-  landmark trials (#1 / #3 / #24).
+- `results/<combo>/hpo/results.tsv` — 16 row history.
+- `results/<combo>/hpo/study_*_iter011_*.json` — val winner. Filename:
+  `study_1779678495.json` (iter11 KEEP, trial#21).
+- `results/<combo>/hpo/study_*_iter008_*.json` — holdout landmark
+  trials (#1 / #3 / #24).
 - `results/<combo>/architecture_log.md` — phase-1 architecture sweep
-  rows (iter1-198) plus phase-2 confirm-trial rows for each study;
-  direct line-by-line comparison of val_auc / nn05 / total.
-- `combo2_hpo.db` — Optuna SQLite store; all studies (including
-  reverted designs) inspectable.
-- `program_phase2.md` — authoritative protocol (rules + iteration loop).
+  rows (iter1-198) plus phase-2 confirm-trial rows for each study.
+- `combo2_hpo.db` — Optuna SQLite store; all studies inspectable.
+- `program_phase2.md` — authoritative protocol with the evolution noted
+  above.
 - `PHASE2_OVERVIEW.md` — repo-root navigation index.
 - Git history: every iter commit + revert preserved.
 
 ## If extending phase-2 further (out of current loop budget)
 
-The iter8 finding raises two follow-on questions worth a one-off study
-(documented but outside the keep/discard loop):
+Two of the three follow-ons from the iter9 conclusion are still
+applicable; the third has now been ruled out empirically.
 
-1. **Soft-voting ensemble of iter8 top-3** — if cosine and constant
-   schedule each land independently on phase-1-beating holdout, an
-   ensemble of their per-seed probabilities may exceed both. Free of
-   architecture change; just inference-side.
-2. **Multi-objective Optuna** — keep val as primary objective but add
-   holdout as secondary, sample the Pareto front instead of single
-   best. Would change the framework noticeably, so out of phase-2 scope
-   here, but the natural next step if the user wants a phase-3.
+1. **Soft-voting ensemble of iter8 top-3 (+ iter11 trial#21)** —
+   inference-side only, no further training. Two distinct clusters
+   (high-wd iter3 / low-wd iter11) and one holdout-best (iter8 #1)
+   could compensate each other's prediction biases. Worth a one-off
+   experiment.
+2. **Multi-objective Optuna (val × holdout Pareto)** — would be a
+   phase-3 framework change. Combo2's holdout signal at iter8 trial#1
+   already hints that a Pareto-aware search might land on a different
+   confirm-best than the val-only loop did.
+3. ~~Architecture HP re-opening (e.g. d_ffn / depth wider ranges)~~ —
+   ruled out by iter13. depth=5 is the productive value for combo2;
+   range pin actively hurts confirm val.
