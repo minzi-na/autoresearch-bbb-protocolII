@@ -115,25 +115,34 @@ def suggest_config(trial: optuna.Trial) -> dict:
     not, the cluster is empirically ruled out for combo2.
     """
     return {
-        # ─── Searched in iter10 (6-D narrow on low-wd / low-dropout) ─────
-        "lr":            trial.suggest_float("lr", 5e-5, 1.5e-4, log=True),
-        "weight_decay":  trial.suggest_float("weight_decay", 5e-7, 1e-5, log=True),
-        "dropout":       trial.suggest_float("dropout", 0.0, 0.10),
-        "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
-        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.15),
-        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.15),
-        # ─── Pinned at iter3 trial#7 architecture HP ─────────────────────
+        # ─── iter17: pin 11 HP at iter11 trial#21 (low-wd cluster best) ──
+        # iter8 took the iter3 trial#7 (high-wd) HP and searched ONLY the
+        # 5 training-procedure HP — produced the holdout breakthrough but
+        # confirm val just below threshold. iter17 repeats that pattern
+        # on top of iter11 trial#21 (low-wd cluster, val 0.852878) which
+        # is the current phase-2 KEEP. Hypothesis: same training-procedure
+        # lever may give iter11 region a holdout+val improvement that
+        # iter8 region missed because it sat at iter3's high-wd point.
+        "lr":                  1.224210548816881e-04,
+        "weight_decay":        1.1448943880446787e-06,
+        "dropout":             0.04651017053232438,
+        "drop_path":           0.02939322283713031,
+        "mod_drop_p":          0.11409884754191069,
+        "head_dropout":        0.0858952025416494,
         "batch_size":          128,
         "grad_clip_max_norm":  1.1357825728372695,
         "d_model":             512,
         "d_ffn":               1536,
         "depth":               5,
-        # ─── Pinned at phase-1 defaults (training-procedure HP off) ──────
-        "lr_schedule":      "constant",
+        # ─── Searched in iter17 (4-D training-procedure HP) ──────────────
+        # Phase-1 baseline at lr_schedule=constant, label_smoothing=0,
+        # ema_decay=0.999 — strictly inside the search box.
+        "lr_schedule":      trial.suggest_categorical(
+            "lr_schedule", ["constant", "cosine"]),
         "lr_warmup_epochs": 0,
-        "lr_min_ratio":     0.0,
-        "label_smoothing":  0.0,
-        "ema_decay":        0.999,
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.10, 0.25),
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.06),
+        "ema_decay":        trial.suggest_float("ema_decay", 0.998, 0.9995, log=True),
     }
 
 
