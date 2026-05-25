@@ -100,36 +100,34 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter8: pin the 11 structural / regularisation HP at iter3 trial#7
-    (the deterministic robust peak that iter1-6 all rediscovered) and
-    search ONLY the 5 new training-procedure HP introduced in iter7's
-    BASE_CONFIG extension. iter7 attempted a full 16-D search with 30
-    trials and the sampler landed on a worse combo than trial#7's
-    defaults — too sparse over 16 dimensions. Fixing the 11 well-
-    explored HP and giving the same 30-trial budget to dense 5-D
-    exploration of LR schedule / warmup / min_ratio / label_smoothing /
-    ema_decay tests whether any non-default training procedure helps
-    when the architecture HP are held at their proven optimum.
+    Ranges are centered on the iter-200 BASE_CONFIG values. d_model/d_ffn/
+    depth are kept narrow because the iter-200 architecture was tuned with
+    those structural values fixed; widening the structural range too much
+    would re-open the phase-1 search.
 
-    Pinned values come from results/<combo>/hpo/study_1779611433.json
-    (iter3 study_name auto_iter003_a539a46706) best_confirm trial#7.
+    iter7 added training-procedure HP via BASE_CONFIG extension
+    (best_train.py): lr_schedule + warmup + min_ratio, label_smoothing,
+    ema_decay. All defaults reproduce phase-1, so the wider search space
+    strictly contains the phase-1 baseline.
     """
     return {
-        # ─── Pinned at iter3 trial#7 (sampler does NOT see these) ─────────
-        "lr":                  1.5017249579685538e-04,
-        "weight_decay":        1.4988661076850772e-04,
-        "batch_size":          128,
-        "grad_clip_max_norm":  1.1357825728372695,
-        "dropout":             0.24255728565116974,
-        "drop_path":           0.0019193198309333526,
-        "mod_drop_p":          0.0904724450023648,
-        "head_dropout":        0.1980520612478055,
-        "d_model":             512,
-        "d_ffn":               1536,
-        "depth":               5,
-        # ─── Searched in iter8 (the 5-D training-procedure subspace) ──────
+        # Optimizer
+        "lr":            trial.suggest_float("lr", 1e-5, 5e-4, log=True),
+        "weight_decay":  trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True),
+        "batch_size":    trial.suggest_categorical("batch_size", [64, 128, 256]),
+        "grad_clip_max_norm": trial.suggest_float("grad_clip_max_norm", 0.5, 2.0),
+        # Regularization
+        "dropout":       trial.suggest_float("dropout", 0.0, 0.4),
+        "drop_path":     trial.suggest_float("drop_path", 0.0, 0.1),
+        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.3),
+        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.3),
+        # Structure-adjacent (narrow)
+        "d_model":       trial.suggest_categorical("d_model", [384, 512, 768]),
+        "d_ffn":         trial.suggest_categorical("d_ffn", [768, 1048, 1536]),
+        "depth":         trial.suggest_int("depth", 3, 6),
+        # iter7+: training-procedure HP (BASE_CONFIG kwargs added in best_train.py).
         # Phase-1 baseline lies at lr_schedule="constant", label_smoothing=0,
-        # ema_decay=0.999 — strictly inside this search space.
+        # ema_decay=0.999 so the search space strictly contains phase-1.
         "lr_schedule":      trial.suggest_categorical(
             "lr_schedule", ["constant", "cosine", "warmup_cosine"]),
         "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
