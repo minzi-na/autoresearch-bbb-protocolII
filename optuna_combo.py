@@ -115,32 +115,25 @@ def suggest_config(trial: optuna.Trial) -> dict:
     not, the cluster is empirically ruled out for combo2.
     """
     return {
-        # ─── iter18: pin 14 HP at iter11 trial#21 + lr_schedule constant +
-        # search ONLY 2-D narrow around iter17 #16 region ────────────────
-        # iter17 top-3 driver: lr_schedule=constant (NOT cosine) +
-        # label_smoothing 0.04-0.06 + ema_decay ~0.998. Holdout broke
-        # phase-1 on both nn05+total. iter18 narrows to a tight box on
-        # only the two effective levers — 30 trials × 2-D is the
-        # densest possible exploitation at this budget.
-        "lr":                  1.224210548816881e-04,
-        "weight_decay":        1.1448943880446787e-06,
-        "dropout":             0.04651017053232438,
-        "drop_path":           0.02939322283713031,
-        "mod_drop_p":          0.11409884754191069,
-        "head_dropout":        0.0858952025416494,
+        # ─── Searched in iter10 (6-D narrow on low-wd / low-dropout) ─────
+        "lr":            trial.suggest_float("lr", 5e-5, 1.5e-4, log=True),
+        "weight_decay":  trial.suggest_float("weight_decay", 5e-7, 1e-5, log=True),
+        "dropout":       trial.suggest_float("dropout", 0.0, 0.10),
+        "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
+        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.15),
+        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.15),
+        # ─── Pinned at iter3 trial#7 architecture HP ─────────────────────
         "batch_size":          128,
         "grad_clip_max_norm":  1.1357825728372695,
         "d_model":             512,
         "d_ffn":               1536,
         "depth":               5,
+        # ─── Pinned at phase-1 defaults (training-procedure HP off) ──────
         "lr_schedule":      "constant",
         "lr_warmup_epochs": 0,
         "lr_min_ratio":     0.0,
-        # ─── 2-D narrow search around iter17 trial#16 ────────────────────
-        # iter17 #16 picked label_smoothing=0.0418, ema_decay=0.998159.
-        # iter17 top-3 cluster: smooth in [0.042, 0.058], ema in [0.998, 0.9986].
-        "label_smoothing":  trial.suggest_float("label_smoothing", 0.035, 0.065),
-        "ema_decay":        trial.suggest_float("ema_decay", 0.9978, 0.9988, log=True),
+        "label_smoothing":  0.0,
+        "ema_decay":        0.999,
     }
 
 
