@@ -100,40 +100,40 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    Ranges are centered on the iter-200 BASE_CONFIG values. d_model/d_ffn/
-    depth are kept narrow because the iter-200 architecture was tuned with
-    those structural values fixed; widening the structural range too much
-    would re-open the phase-1 search.
+    iter10: shift search to the LOW-wd / LOW-dropout cluster that
+    iter1-9 never explored. bbb-combo1's phase-2 winning region (run13
+    -> run28 narrowing chain) was at dropout 0.04-0.06, lr ~1e-4,
+    wd ~3e-6. Our wd range 1e-6..1e-3 nominally included it but TPE
+    deterministically landed at wd~1.5e-4 every iter (iter3 trial#7),
+    so the wd<<1e-5 cluster was never sampled.
 
-    iter7 added training-procedure HP via BASE_CONFIG extension
-    (best_train.py): lr_schedule + warmup + min_ratio, label_smoothing,
-    ema_decay. All defaults reproduce phase-1, so the wider search space
-    strictly contains the phase-1 baseline.
+    This iter restricts the search to the bbb-combo1-style cluster and
+    pins the structural / training-procedure HP at iter3 trial#7 +
+    phase-1 defaults. The 6-D box is small enough for 30 trials to do
+    dense exploitation. If a low-wd / low-dropout combination exists
+    that exceeds iter3 trial#7's val 0.852850, iter10 finds it; if
+    not, the cluster is empirically ruled out for combo2.
     """
     return {
-        # Optimizer
-        "lr":            trial.suggest_float("lr", 1e-5, 5e-4, log=True),
-        "weight_decay":  trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True),
-        "batch_size":    trial.suggest_categorical("batch_size", [64, 128, 256]),
-        "grad_clip_max_norm": trial.suggest_float("grad_clip_max_norm", 0.5, 2.0),
-        # Regularization
-        "dropout":       trial.suggest_float("dropout", 0.0, 0.4),
-        "drop_path":     trial.suggest_float("drop_path", 0.0, 0.1),
-        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.3),
-        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.3),
-        # Structure-adjacent (narrow)
-        "d_model":       trial.suggest_categorical("d_model", [384, 512, 768]),
-        "d_ffn":         trial.suggest_categorical("d_ffn", [768, 1048, 1536]),
-        "depth":         trial.suggest_int("depth", 3, 6),
-        # iter7+: training-procedure HP (BASE_CONFIG kwargs added in best_train.py).
-        # Phase-1 baseline lies at lr_schedule="constant", label_smoothing=0,
-        # ema_decay=0.999 so the search space strictly contains phase-1.
-        "lr_schedule":      trial.suggest_categorical(
-            "lr_schedule", ["constant", "cosine", "warmup_cosine"]),
-        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
-        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
-        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
-        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
+        # ─── Searched in iter10 (6-D narrow on low-wd / low-dropout) ─────
+        "lr":            trial.suggest_float("lr", 5e-5, 1.5e-4, log=True),
+        "weight_decay":  trial.suggest_float("weight_decay", 5e-7, 1e-5, log=True),
+        "dropout":       trial.suggest_float("dropout", 0.0, 0.10),
+        "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
+        "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.15),
+        "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.15),
+        # ─── Pinned at iter3 trial#7 architecture HP ─────────────────────
+        "batch_size":          128,
+        "grad_clip_max_norm":  1.1357825728372695,
+        "d_model":             512,
+        "d_ffn":               1536,
+        "depth":               5,
+        # ─── Pinned at phase-1 defaults (training-procedure HP off) ──────
+        "lr_schedule":      "constant",
+        "lr_warmup_epochs": 0,
+        "lr_min_ratio":     0.0,
+        "label_smoothing":  0.0,
+        "ema_decay":        0.999,
     }
 
 
@@ -227,12 +227,19 @@ def main():
     X_pool = prepare.build_feature_matrix(combo_tuple, pool_feats)
     print(f"[Data] pool size={len(pool_smiles)}  X_pool shape={X_pool.shape}")
 
-    # iter3: 5-seed mean objective to raise search SNR (vs prior 3-seed).
-    # Override the CLI-passed search_seeds inside objective so evaluate_hpo's
-    # frozen BUDGET (3 seeds) is not edited. The 2 extra seeds are taken from
-    # the confirm pool to keep search ⊂ confirm pattern consistent with
-    # pilot/iter1/iter2.
-    objective_seeds = [42, 100, 200, 300, 400]
+    # iter11: bump objective seeds 5 -> 7 to reduce iter10's
+    # search-to-confirm overfit. iter10's top trials all showed
+    # search val 0.8544..0.8548 collapse to confirm 0.8520..0.8523 on
+    # the same low-wd / low-dropout cluster — search SNR was too low to
+    # distinguish HP that overfit the 5 search seeds from HP that
+    # generalise across the full 10-seed confirm pool. Adding seeds 500
+    # and 600 (also from the confirm pool, so search ⊂ confirm pattern
+    # is preserved) gives the sampler a 7-seed mean signal instead of
+    # 5-seed.
+    #
+    # iter3 (kept) used 5 seeds [42,100,200,300,400]; iter11 uses
+    # [42,100,200,300,400,500,600].
+    objective_seeds = [42, 100, 200, 300, 400, 500, 600]
 
     def objective(trial: optuna.Trial) -> float:
         cfg = suggest_config(trial)
