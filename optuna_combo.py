@@ -115,26 +115,20 @@ def suggest_config(trial: optuna.Trial) -> dict:
     not, the cluster is empirically ruled out for combo2.
     """
     return {
-        # ─── iter13: architecture HP RANGE pin (single lever vs iter11) ───
-        # iter11 KEEP fixed d_model=512, d_ffn=1536, depth=5. iter13
-        # widens these to small ranges (incl. d_ffn 2048/3072, depth 7
-        # — beyond iter1-7's max) while keeping every other lever
-        # identical to iter11. If a different architecture variant
-        # inside the low-wd cluster beats iter11 trial#21's val 0.852878,
-        # we find it here without changing seed pool or continuous HP.
-        "d_model":   trial.suggest_categorical("d_model", [512, 768]),
-        "d_ffn":     trial.suggest_categorical("d_ffn", [1024, 1536, 2048, 3072]),
-        "depth":     trial.suggest_int("depth", 4, 7),
-        # ─── iter10/11 cluster region (low-wd / low-dropout, unchanged) ──
+        # ─── Searched in iter10 (6-D narrow on low-wd / low-dropout) ─────
         "lr":            trial.suggest_float("lr", 5e-5, 1.5e-4, log=True),
         "weight_decay":  trial.suggest_float("weight_decay", 5e-7, 1e-5, log=True),
         "dropout":       trial.suggest_float("dropout", 0.0, 0.10),
         "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
         "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.15),
         "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.15),
-        # ─── Pinned (unchanged from iter11) ──────────────────────────────
+        # ─── Pinned at iter3 trial#7 architecture HP ─────────────────────
         "batch_size":          128,
         "grad_clip_max_norm":  1.1357825728372695,
+        "d_model":             512,
+        "d_ffn":               1536,
+        "depth":               5,
+        # ─── Pinned at phase-1 defaults (training-procedure HP off) ──────
         "lr_schedule":      "constant",
         "lr_warmup_epochs": 0,
         "lr_min_ratio":     0.0,
