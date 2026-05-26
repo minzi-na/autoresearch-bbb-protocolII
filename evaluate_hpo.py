@@ -52,19 +52,10 @@ BUDGET = {
     # iter1-4 all hit the same TPE deterministic optimum at trial#7).
     # n_startup_trials=15 for TPE/CmaEs means 30 = 15 startup + 15
     # exploitation, still enough for the sampler to learn.
-    #
-    # combo1 iter1+: search_seeds bumped from combo2's "42,100,200" (3
-    # seeds clustered in the lower half of confirm range) to
-    # "42,200,400,600,800" (5 seeds, stride 200, strict subset of confirm
-    # seeds 42,100,...,900). Spreads search seeds evenly across the
-    # confirm range so the search-to-confirm AUC correlation is not
-    # biased toward low-seed splits. optuna_combo.py was simultaneously
-    # fixed to consume args.search_seeds instead of a hardcoded list,
-    # so BUDGET is now the single source of truth for both phases.
     "n_trials":          30,
     "top_k":             3,
     "search_num_epochs": 30,
-    "search_seeds":      "42,200,400,600,800",
+    "search_seeds":      "42,100,200",
     "confirm_seeds":     "42,100,200,300,400,500,600,700,800,900",
     "sampler_seed":      0,
 }
