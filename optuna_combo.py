@@ -113,10 +113,10 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter1 starting design: pin structural at iter197 best; explore lr
-    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
-    five new phase-2 lever HP. 6-D narrow search to validate the
-    phase-2 surface before opening it up.
+    iter4 narrow exploitation around iter3 top cluster. iter3 introduced
+    adamw_wd (top 5 trials all clustered at 0.001..0.0027; trial#4 at
+    0.0074 was the worst). Narrow all 5 continuous HP around the iter3
+    top region. Family: narrow-new-HP. Pin schedule=cosine + lr_warmup=0.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -125,16 +125,20 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
-        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
-        # ─── Searched: phase-2 training-procedure HP ─────────────────────
-        "lr_schedule":      trial.suggest_categorical(
-            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
-        ),
-        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
-        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
-        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
-        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
+        # ─── Pinned: phase-2 schedule (iter1 clear winner) ──────────────
+        "lr_schedule":      "cosine",
+        "lr_warmup_epochs": 0,
+        # ─── Narrowed around iter3 top cluster (5 trials with val≥0.85506) ─
+        # iter3 top lr range: 0.000115..0.000139
+        "lr":               trial.suggest_float("lr", 1.0e-4, 1.4e-4, log=True),
+        # iter3 top lr_min_ratio range: 0.122..0.260
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.10, 0.28),
+        # iter3 top ema_decay range: 0.998437..0.999248 (trial#2 had 0.999248)
+        "ema_decay":        trial.suggest_float("ema_decay", 0.998, 0.9994, log=True),
+        # iter3 top label_smoothing range: 0.027..0.048
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.02, 0.05),
+        # iter3 top adamw_wd region: 0.0011..0.0027 (low half); slight expansion
+        "adamw_wd":         trial.suggest_float("adamw_wd", 7e-4, 4e-3, log=True),
     }
 
 
