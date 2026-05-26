@@ -113,10 +113,17 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter1 starting design: pin structural at iter197 best; explore lr
-    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
-    five new phase-2 lever HP. 6-D narrow search to validate the
-    phase-2 surface before opening it up.
+    iter3 direction switch (family: expose-new-HP). iter1/iter2 narrowed
+    the phase-2 starting 5 HP twice consecutively without beating the
+    threshold (best confirm 0.85431 / 0.854503 vs threshold 0.854947).
+    Both top-region patterns agreed: cosine + lr ~1.1e-4 + lr_min_ratio
+    ~0.2 + ema_decay ~0.9986 (lower than phase-1's 0.9993) + label_smoothing
+    0.02-0.04 → near-baseline val, but still short. Direction switch:
+    expose `adamw_wd` (phase-1 hardcoded 0.003 inside train_model since
+    iter148; only swept on 0.002-0.004 narrow grid; 0.001 and 0.005+
+    untested under the cosine + lower-ema_decay phase-2 stack) and
+    search it alongside the iter1/iter2-confirmed good region of the
+    other 4 HP. Pin schedule=cosine + lr_warmup_epochs=0.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -125,16 +132,24 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
-        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
-        # ─── Searched: phase-2 training-procedure HP ─────────────────────
-        "lr_schedule":      trial.suggest_categorical(
-            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
-        ),
-        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
-        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
-        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
-        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
+        # ─── Pinned: phase-2 schedule (iter1 clear winner: cosine no-warmup) ─
+        "lr_schedule":      "cosine",
+        "lr_warmup_epochs": 0,
+        # ─── Searched: narrowed around iter1/iter2 top region ────────────
+        # lr 9e-5..1.4e-4 (iter1 top: 1.07e-4..1.20e-4; iter2 top: 1.10e-4..1.29e-4)
+        "lr":               trial.suggest_float("lr", 9e-5, 1.4e-4, log=True),
+        # lr_min_ratio 0.10..0.30 (iter1 top: 0.20..0.24; iter2 top: 0.18..0.26)
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.10, 0.30),
+        # ema_decay 0.998..0.9994 log (iter1/iter2 top ~0.9985; phase-1 0.9993)
+        "ema_decay":        trial.suggest_float("ema_decay", 0.998, 0.9994, log=True),
+        # label_smoothing 0..0.05 (iter1/iter2 top region)
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.05),
+        # ─── NEW: AdamW decay-group wd (was hardcoded 0.003 since iter148) ─
+        # Phase-1 sweep: 0.002 (iter149 DISCARD), 0.003 (iter148 KEEP),
+        # 0.004 (iter150 DISCARD), 0.005+ (iter89/iter173 DISCARD). 0.001
+        # untested; cosine + lower-ema_decay phase-2 stack may shift optimum.
+        # Log-uniform 1e-3..1e-2 covers the phase-1 winner with headroom both ways.
+        "adamw_wd":         trial.suggest_float("adamw_wd", 1e-3, 1e-2, log=True),
     }
 
 
