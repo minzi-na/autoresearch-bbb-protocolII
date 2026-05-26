@@ -113,9 +113,6 @@ BASE_CONFIG = {
     "label_smoothing":     0.0,         # BCE target smoothing in [0, 1)
     "ema_decay":           0.9993,      # was hardcoded; now overridable
     "ema_warmup_epochs":   1,           # was hardcoded; now overridable
-    # iter3 expose: AdamW decay-group weight decay (was hardcoded 0.003 inside
-    # train_model — iter148 frozen). 0.003 default keeps phase-1 byte-identical.
-    "adamw_wd":            0.003,
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -309,8 +306,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc",
                 ema_decay=0.9993, ema_warmup_epochs=1,
                 label_smoothing=0.0,
-                lr_schedule="constant", lr_warmup_epochs=0, lr_min_ratio=0.0,
-                adamw_wd=0.003):
+                lr_schedule="constant", lr_warmup_epochs=0, lr_min_ratio=0.0):
     if es_metric == "val_loss":
         best_score = float("inf")
         is_better  = lambda new, cur: new < cur
@@ -344,7 +340,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             decay_params.append(p)
     optimizer = optim.AdamW(
         [
-            {"params": decay_params, "weight_decay": adamw_wd},
+            {"params": decay_params, "weight_decay": 0.003},
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
         lr=lr,
@@ -615,7 +611,6 @@ def build_and_train(
         lr_schedule=cfg.get("lr_schedule", "constant"),
         lr_warmup_epochs=cfg.get("lr_warmup_epochs", 0),
         lr_min_ratio=cfg.get("lr_min_ratio", 0.0),
-        adamw_wd=cfg.get("adamw_wd", 0.003),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
@@ -711,8 +706,7 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
                              ema_decay=0.9993, ema_warmup_epochs=1,
                              label_smoothing=0.0,
                              lr_schedule="constant",
-                             lr_warmup_epochs=0, lr_min_ratio=0.0,
-                             adamw_wd=0.003):
+                             lr_warmup_epochs=0, lr_min_ratio=0.0):
     """Mirror of train_model with Optuna pruning. Reports best-so-far score
     each epoch and raises TrialPruned if the pruner says so."""
     import optuna
@@ -740,7 +734,7 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
             decay_params.append(p)
     optimizer = optim.AdamW(
         [
-            {"params": decay_params, "weight_decay": adamw_wd},
+            {"params": decay_params, "weight_decay": 0.003},
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
         lr=lr,
@@ -930,7 +924,6 @@ def build_and_train_with_pruning(
         lr_schedule=cfg.get("lr_schedule", "constant"),
         lr_warmup_epochs=cfg.get("lr_warmup_epochs", 0),
         lr_min_ratio=cfg.get("lr_min_ratio", 0.0),
-        adamw_wd=cfg.get("adamw_wd", 0.003),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
