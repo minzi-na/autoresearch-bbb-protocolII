@@ -113,10 +113,13 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter1 starting design: pin structural at iter197 best; explore lr
-    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
-    five new phase-2 lever HP. 6-D narrow search to validate the
-    phase-2 surface before opening it up.
+    iter5 direction switch — expose R-Drop alpha_max (was hardcoded 1.0
+    in train_model since iter80; never swept in phase-1). Combine with
+    iter3 finding (adamw_wd low region preferred) + iter4-confirmed
+    narrow ranges for the other 4 HP. Family: expose-new-HP (R-Drop).
+    With 4 consecutive discards (iter1-4), one more discard triggers the
+    5-consec early-termination rule — pick the highest-headroom
+    untouched lever.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -125,16 +128,23 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
-        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
-        # ─── Searched: phase-2 training-procedure HP ─────────────────────
-        "lr_schedule":      trial.suggest_categorical(
-            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
-        ),
-        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
-        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
-        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
-        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
+        # ─── Pinned: phase-2 schedule (iter1 winner) ─────────────────────
+        "lr_schedule":      "cosine",
+        "lr_warmup_epochs": 0,
+        # ─── Narrowed around iter4 region (5 cont. HP) ───────────────────
+        "lr":               trial.suggest_float("lr", 1.0e-4, 1.4e-4, log=True),
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.10, 0.28),
+        "ema_decay":        trial.suggest_float("ema_decay", 0.998, 0.9994, log=True),
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.02, 0.05),
+        "adamw_wd":         trial.suggest_float("adamw_wd", 7e-4, 4e-3, log=True),
+        # ─── NEW: R-Drop alpha_max ──────────────────────────────────────
+        # Phase-1 set this to 1.0 at iter80 and never swept. The R-Drop
+        # consistency-loss coefficient is one of the largest unexplored
+        # levers. Log-uniform 0.3..2.0 brackets the phase-1 anchor with
+        # ~3x halving and ~2x doubling headroom. iter5 also exposes
+        # rdrop_warmup_epochs in BASE_CONFIG (default 5) for future iters
+        # but keeps it pinned at 5 here to isolate the alpha_max effect.
+        "rdrop_alpha_max":  trial.suggest_float("rdrop_alpha_max", 0.3, 2.0, log=True),
     }
 
 

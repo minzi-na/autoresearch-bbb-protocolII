@@ -113,6 +113,14 @@ BASE_CONFIG = {
     "label_smoothing":     0.0,         # BCE target smoothing in [0, 1)
     "ema_decay":           0.9993,      # was hardcoded; now overridable
     "ema_warmup_epochs":   1,           # was hardcoded; now overridable
+    # iter3 expose: AdamW decay-group weight decay (was hardcoded 0.003 inside
+    # train_model — iter148 frozen). 0.003 default keeps phase-1 byte-identical.
+    "adamw_wd":            0.003,
+    # iter5 expose: R-Drop consistency-loss alpha max + warmup-length
+    # (were hardcoded 1.0 and 5 inside train_model — iter80/106 frozen).
+    # Defaults preserve phase-1 byte-identical training.
+    "rdrop_alpha_max":     1.0,
+    "rdrop_warmup_epochs": 5,
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -306,7 +314,9 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc",
                 ema_decay=0.9993, ema_warmup_epochs=1,
                 label_smoothing=0.0,
-                lr_schedule="constant", lr_warmup_epochs=0, lr_min_ratio=0.0):
+                lr_schedule="constant", lr_warmup_epochs=0, lr_min_ratio=0.0,
+                adamw_wd=0.003,
+                rdrop_alpha_max=1.0, rdrop_warmup_epochs=5):
     if es_metric == "val_loss":
         best_score = float("inf")
         is_better  = lambda new, cur: new < cur
@@ -340,7 +350,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             decay_params.append(p)
     optimizer = optim.AdamW(
         [
-            {"params": decay_params, "weight_decay": 0.003},
+            {"params": decay_params, "weight_decay": adamw_wd},
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
         lr=lr,
@@ -402,7 +412,11 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             # iter106: warmup R-Drop alpha 0 -> 1.0 over first 5 epochs (linear).
             # Defer consistency penalty until model has learned useful features,
             # avoiding penalizing noise-driven predictions in epoch 0-1.
-            rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
+            # Phase-2 iter5+: alpha_max + warmup length are caller-provided
+            # (defaults 1.0 / 5 reproduce phase-1 byte-identical).
+            rdrop_alpha = rdrop_alpha_max * min(
+                1.0, (epoch + 1) / max(rdrop_warmup_epochs, 1)
+            )
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
             optimizer.step()
@@ -611,6 +625,9 @@ def build_and_train(
         lr_schedule=cfg.get("lr_schedule", "constant"),
         lr_warmup_epochs=cfg.get("lr_warmup_epochs", 0),
         lr_min_ratio=cfg.get("lr_min_ratio", 0.0),
+        adamw_wd=cfg.get("adamw_wd", 0.003),
+        rdrop_alpha_max=cfg.get("rdrop_alpha_max", 1.0),
+        rdrop_warmup_epochs=cfg.get("rdrop_warmup_epochs", 5),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
@@ -706,7 +723,9 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
                              ema_decay=0.9993, ema_warmup_epochs=1,
                              label_smoothing=0.0,
                              lr_schedule="constant",
-                             lr_warmup_epochs=0, lr_min_ratio=0.0):
+                             lr_warmup_epochs=0, lr_min_ratio=0.0,
+                             adamw_wd=0.003,
+                             rdrop_alpha_max=1.0, rdrop_warmup_epochs=5):
     """Mirror of train_model with Optuna pruning. Reports best-so-far score
     each epoch and raises TrialPruned if the pruner says so."""
     import optuna
@@ -734,7 +753,7 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
             decay_params.append(p)
     optimizer = optim.AdamW(
         [
-            {"params": decay_params, "weight_decay": 0.003},
+            {"params": decay_params, "weight_decay": adamw_wd},
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
         lr=lr,
@@ -775,7 +794,11 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
                      + (1 - p1) * ((1 - p1).log() - (1 - p2).log())).mean()
             kl_21 = (p2 * (p2.log() - p1.log())
                      + (1 - p2) * ((1 - p2).log() - (1 - p1).log())).mean()
-            rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
+            # Phase-2 iter5+: alpha_max + warmup-len caller-provided (defaults
+            # 1.0 / 5 reproduce the phase-1 hardcoded iter80/106 behaviour).
+            rdrop_alpha = rdrop_alpha_max * min(
+                1.0, (epoch + 1) / max(rdrop_warmup_epochs, 1)
+            )
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
             optimizer.step()
@@ -924,6 +947,9 @@ def build_and_train_with_pruning(
         lr_schedule=cfg.get("lr_schedule", "constant"),
         lr_warmup_epochs=cfg.get("lr_warmup_epochs", 0),
         lr_min_ratio=cfg.get("lr_min_ratio", 0.0),
+        adamw_wd=cfg.get("adamw_wd", 0.003),
+        rdrop_alpha_max=cfg.get("rdrop_alpha_max", 1.0),
+        rdrop_warmup_epochs=cfg.get("rdrop_warmup_epochs", 5),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
