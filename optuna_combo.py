@@ -98,18 +98,10 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 #  Search space — phase-2 EDITABLE (the agent rewrites this each iter)
 #
-#  iter2 design: 2nd narrowing (same family as iter1; 3rd narrowing would
-#  trigger forced direction switch). iter1 (DISCARD, confirm=0.854310,
-#  gap -0.000637 vs threshold 0.854947) revealed a clear top-trial region:
-#    - lr_schedule=cosine dominates (top-5 trials all chose cosine)
-#    - lr_min_ratio clusters at 0.20-0.24 (upper half of (0,0.3))
-#    - ema_decay clusters at 0.9984-0.9988 (LOW band of (0.998,0.9997)) —
-#      notably below iter197's 0.9993, suggesting cosine+LS schedule
-#      prefers a lower EMA decay than the phase-1 constant-LR setup.
-#    - lr clusters at 1.07e-4 to 1.20e-4 (Adam input -> AdamW 1.34-1.50e-4)
-#    - label_smoothing spread (0.006-0.039) — signal unclear, kept open.
-#  iter2 pins lr_schedule="cosine" and narrows lr / lr_min_ratio /
-#  ema_decay to the winner neighborhood. 30 trials × 4-D search.
+#  Starting point for combo1 phase-2: a narrow pilot search around the
+#  iter197 frozen architecture, exploring only the new phase-2 lever
+#  HP introduced in best_train.py (lr + LR schedule + label smoothing
+#  + EMA decay). Structural HP are pinned at iter197 best values.
 #
 #  Combo1-specific caveat: BASE_CONFIG.weight_decay is effectively
 #  unused (train_model overrides Adam with AdamW wd=0.003 hardcoded —
@@ -121,11 +113,10 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter2: pin lr_schedule="cosine" (iter1 dominant winner). Narrow lr
-    to (9e-5, 1.3e-4), lr_min_ratio to (0.10, 0.30), ema_decay to
-    (0.998, 0.999) — the LOW band where iter1 top-3 clustered, below
-    iter197's 0.9993. Keep label_smoothing (0, 0.05) since iter1 signal
-    is mixed (rank1 best had 0.039; rank3 had 0.006).
+    iter1 starting design: pin structural at iter197 best; explore lr
+    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
+    five new phase-2 lever HP. 6-D narrow search to validate the
+    phase-2 surface before opening it up.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -134,17 +125,16 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Pinned to cosine (iter1 top-5 all chose cosine) ─────────────
-        "lr_schedule":    "cosine",
-        # ─── Searched: lr narrowed around iter1 top-3 (~1.1e-4) ──────────
-        "lr":             trial.suggest_float("lr", 9e-5, 1.3e-4, log=True),
-        # ─── Searched: lr_min_ratio narrowed to upper half ───────────────
-        "lr_min_ratio":   trial.suggest_float("lr_min_ratio", 0.10, 0.30),
-        # ─── Searched: ema_decay narrowed to LOW band (iter1 top-3 here)
-        # vs iter197's 0.9993. Suggests cosine+LS prefers lower EMA decay.
-        "ema_decay":      trial.suggest_float("ema_decay", 0.998, 0.999, log=True),
-        # ─── Searched: label_smoothing unchanged (iter1 signal mixed) ────
-        "label_smoothing": trial.suggest_float("label_smoothing", 0.0, 0.05),
+        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
+        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
+        # ─── Searched: phase-2 training-procedure HP ─────────────────────
+        "lr_schedule":      trial.suggest_categorical(
+            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
+        ),
+        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
+        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
     }
 
 
@@ -238,14 +228,10 @@ def main():
     X_pool = prepare.build_feature_matrix(combo_tuple, pool_feats)
     print(f"[Data] pool size={len(pool_smiles)}  X_pool shape={X_pool.shape}")
 
-    # Objective evaluates each trial on the search_seeds list (multi-seed
-    # mean). Previously a hardcoded [42,100,200,300,400] (clustered in the
-    # lower half of the 10-seed confirm range, causing biased search-to-
-    # confirm correlation). Now driven by BUDGET["search_seeds"] in
-    # evaluate_hpo.py — combo1 iter1+: "42,200,400,600,800" spreads the
-    # search seeds evenly across the confirm range (stride 200, strict
-    # subset of confirm seeds 42,100,...,900).
-    objective_seeds = search_seeds
+    # Objective evaluates each trial on 5 seeds (multi-seed mean) — matches
+    # the combo2 iter3 stable starting point. Phase-2 agent may bump this
+    # later if search-to-confirm overfit shows up.
+    objective_seeds = [42, 100, 200, 300, 400]
 
     def objective(trial: optuna.Trial) -> float:
         cfg = suggest_config(trial)
