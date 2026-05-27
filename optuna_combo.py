@@ -35,7 +35,7 @@ import pandas as pd
 import torch
 import torch.utils.data as torch_data
 import optuna
-from optuna.samplers import CmaEsSampler
+from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
 
 from sklearn.metrics import (
@@ -113,16 +113,10 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter7 design (family E = search-quality direction switch):
-    The iter1-6 bottleneck was a stable ~0.001 search→confirm gap:
-    search (5-seed mean, 30 epochs) overfits its sample, then confirm
-    (10-seed mean, 50 epochs) regresses. iter7 attacks this directly by
-    bumping objective_seeds 5→10 (now matches the confirm seed set
-    exactly) so search-mean and confirm-mean differ only by num_epochs
-    (30 vs 50). CmaEs is kept (iter6 showed it finds tighter top-cluster
-    than TPE); pin lr_schedule=cosine + lr_warmup=0 (iter1-5 unanimous);
-    narrow 4-D continuous space around iter6 top cluster (lr~1.2e-4,
-    lr_min_ratio~0.22, ema_decay~0.9987, label_smoothing~0.03).
+    iter1 starting design: pin structural at iter197 best; explore lr
+    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
+    five new phase-2 lever HP. 6-D narrow search to validate the
+    phase-2 surface before opening it up.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -131,17 +125,16 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Pinned: iter1-5 unanimous winners (CmaEs continuous-only) ───
-        "lr_schedule":      "cosine",
-        "lr_warmup_epochs": 0,
-        # ─── CmaEs searches: 4-D continuous narrow exploitation ──────────
-        # iter6 top-3 cluster: lr 1.20-1.27e-4, lr_min_ratio 0.21-0.24,
-        # ema_decay 0.9986-0.9988, label_smoothing 0.024-0.036. Slightly
-        # widened here to give CmaEs population some exploration room.
-        "lr":              trial.suggest_float("lr",              1.0e-4, 1.5e-4, log=True),
-        "lr_min_ratio":    trial.suggest_float("lr_min_ratio",    0.10,   0.30),
-        "ema_decay":       trial.suggest_float("ema_decay",       0.998,  0.9994, log=True),
-        "label_smoothing": trial.suggest_float("label_smoothing", 0.0,    0.06),
+        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
+        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
+        # ─── Searched: phase-2 training-procedure HP ─────────────────────
+        "lr_schedule":      trial.suggest_categorical(
+            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
+        ),
+        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
+        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
     }
 
 
@@ -235,14 +228,10 @@ def main():
     X_pool = prepare.build_feature_matrix(combo_tuple, pool_feats)
     print(f"[Data] pool size={len(pool_smiles)}  X_pool shape={X_pool.shape}")
 
-    # iter7 (family E = search-quality): objective_seeds bumped from 5
-    # to the full 10-seed confirm set. iter1-6 all showed a stable
-    # ~0.001 search→confirm regression on the same params, indicating
-    # 5-seed search mean was sampling-noise overfit. Matching seeds in
-    # search and confirm collapses that gap to just the num_epochs
-    # difference (30 vs 50). Wall-time cost: search phase doubles
-    # (~+12min) → iter7 expected ~50min vs iter6's 37min.
-    objective_seeds = [42, 100, 200, 300, 400, 500, 600, 700, 800, 900]
+    # Objective evaluates each trial on 5 seeds (multi-seed mean) — matches
+    # the combo2 iter3 stable starting point. Phase-2 agent may bump this
+    # later if search-to-confirm overfit shows up.
+    objective_seeds = [42, 100, 200, 300, 400]
 
     def objective(trial: optuna.Trial) -> float:
         cfg = suggest_config(trial)
@@ -253,12 +242,7 @@ def main():
         trial.set_user_attr("per_seed_val_auc", aucs)
         return float(np.mean(aucs))
 
-    # iter7 keeps the iter6 CmaEs sampler (better local exploitation in
-    # narrow continuous space than TPE was for iter1-5). With the new
-    # 10-seed objective the search→confirm overfit gap should close,
-    # letting CmaEs's tighter top-cluster (iter6 found 0.8554 search vs
-    # iter1-5's 0.8553) translate into a faithful confirm.
-    sampler = CmaEsSampler(seed=args.sampler_seed, n_startup_trials=5)
+    sampler = TPESampler(seed=args.sampler_seed, n_startup_trials=15, multivariate=True)
     pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=5)
     study = optuna.create_study(
         direction="maximize",
