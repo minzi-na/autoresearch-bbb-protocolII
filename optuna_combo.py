@@ -113,10 +113,14 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter1 starting design: pin structural at iter197 best; explore lr
-    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
-    five new phase-2 lever HP. 6-D narrow search to validate the
-    phase-2 surface before opening it up.
+    iter8 design (family F = expose-model-HP):
+    Single new lever — head_dropout (was Dropout(0.10) in
+    MultiModalGMLPFromFlat since iter86, never sweep-tested in phase-1
+    nor phase-2). Pin iter1-5 winners: lr_schedule=cosine (unanimous
+    from iter1), lr_warmup_epochs=0 (cosine no-warmup), and narrow the
+    continuous 4-D (lr / lr_min_ratio / ema_decay / label_smoothing) at
+    iter4 top-cluster ranges. TPESampler returns (iter6/7 CmaEs was
+    undersampled at 30 trials).
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -125,16 +129,18 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
-        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
-        # ─── Searched: phase-2 training-procedure HP ─────────────────────
-        "lr_schedule":      trial.suggest_categorical(
-            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
-        ),
-        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
-        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
-        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
-        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
+        # ─── Pinned at iter1-5 winners ───────────────────────────────────
+        "lr_schedule":      "cosine",
+        "lr_warmup_epochs": 0,
+        # ─── Searched: continuous 4-D narrowed to iter4 top cluster ──────
+        "lr":             trial.suggest_float("lr", 1.0e-4, 1.4e-4, log=True),
+        "lr_min_ratio":   trial.suggest_float("lr_min_ratio", 0.10, 0.28),
+        "ema_decay":      trial.suggest_float("ema_decay", 0.998, 0.9994, log=True),
+        "label_smoothing": trial.suggest_float("label_smoothing", 0.02, 0.05),
+        # ─── Searched: NEW model-side lever (iter8) ──────────────────────
+        # head_dropout was Dropout(0.10) hardcoded since iter86. Phase-1
+        # only tested 0.20 -> 0.10 single swap (iter86); never finer.
+        "head_dropout":   trial.suggest_float("head_dropout", 0.05, 0.20),
     }
 
 

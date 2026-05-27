@@ -113,6 +113,9 @@ BASE_CONFIG = {
     "label_smoothing":     0.0,         # BCE target smoothing in [0, 1)
     "ema_decay":           0.9993,      # was hardcoded; now overridable
     "ema_warmup_epochs":   1,           # was hardcoded; now overridable
+    # iter8: un-hardcode head dropout (was Dropout(0.10) in MultiModalGMLPFromFlat
+    # since iter86). Default 0.10 = phase-1 byte-identical.
+    "head_dropout":        0.10,
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -217,7 +220,8 @@ class gMLP(nn.Module):
 
 class MultiModalGMLPFromFlat(nn.Module):
     def __init__(self, mod_dims: OrderedDict, d_model=512, d_ffn=1024,
-                 depth=4, dropout=0.2, use_gated_pool=True):
+                 depth=4, dropout=0.2, use_gated_pool=True,
+                 head_dropout=0.10):
         super().__init__()
         self.mod_names = list(mod_dims.keys())
         self.mod_dims  = [mod_dims[n] for n in self.mod_names]
@@ -246,7 +250,9 @@ class MultiModalGMLPFromFlat(nn.Module):
         # iter86: head dropout 0.20 -> 0.10 on R-Drop stack. iter56 tried this
         # without R-Drop and failed; R-Drop's consistency reg may compensate
         # for the reduced explicit head dropout.
-        self.drop = nn.Dropout(0.10)
+        # iter8 (phase-2): expose via constructor kwarg; default 0.10 keeps
+        # phase-1 byte-identical when called from train.py / evaluate_combo.py.
+        self.drop = nn.Dropout(head_dropout)
         # iter6: per-sample modality token dropout (zero a whole modality
         # token with prob p) — encourages cross-modal redundancy / prevents
         # single-modality overfit. Active in training only.
@@ -587,6 +593,7 @@ def build_and_train(
         depth=cfg["depth"],
         dropout=cfg["dropout"],
         use_gated_pool=cfg["use_gated_pool"],
+        head_dropout=cfg.get("head_dropout", 0.10),
     ).to(device)
 
     # The Adam optimizer here is read for its lr only — train_model
@@ -903,6 +910,7 @@ def build_and_train_with_pruning(
         depth=cfg["depth"],
         dropout=cfg["dropout"],
         use_gated_pool=cfg["use_gated_pool"],
+        head_dropout=cfg.get("head_dropout", 0.10),
     ).to(device)
 
     optimizer = optim.Adam(
