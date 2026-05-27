@@ -35,7 +35,7 @@ import pandas as pd
 import torch
 import torch.utils.data as torch_data
 import optuna
-from optuna.samplers import CmaEsSampler
+from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
 
 from sklearn.metrics import (
@@ -113,19 +113,10 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter6 design (direction switch from iter1-5 TPE family):
-    Sampler swapped to CmaEsSampler. iter1-5 top-region analysis showed
-    `lr_schedule=cosine` and `lr_warmup_epochs=0` unanimous across 5
-    studies, so they are pinned here (CmaEs only handles continuous
-    params well anyway). `rdrop_alpha_max` is left hardcoded at 1.0
-    (iter5 confirmed phase-1 value is locally optimal). `adamw_wd` is
-    left hardcoded at 0.003 (iter3-4 found the 0.0015-0.002 region
-    indistinguishable from phase-1 value within noise band; re-exposing
-    here would only complicate the 4-D continuous CmaEs space).
-
-    The 4-D continuous space below is centered on the iter1-5 top
-    cluster — narrower than iter1 by ~2x, designed for CmaEs local
-    exploitation rather than TPE-style broad search.
+    iter1 starting design: pin structural at iter197 best; explore lr
+    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
+    five new phase-2 lever HP. 6-D narrow search to validate the
+    phase-2 surface before opening it up.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -134,16 +125,16 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Pinned: iter1-5 unanimous winners (CmaEs continuous-only) ───
-        "lr_schedule":      "cosine",
-        "lr_warmup_epochs": 0,
-        # ─── CmaEs searches: 4-D continuous narrow exploitation ──────────
-        # Ranges = iter1-5 top-cluster ± small buffer (see conclusion.md).
-        # lr (Adam input; effective AdamW lr = 1.25 × this).
-        "lr":              trial.suggest_float("lr",              1.0e-4, 1.5e-4, log=True),
-        "lr_min_ratio":    trial.suggest_float("lr_min_ratio",    0.10,   0.30),
-        "ema_decay":       trial.suggest_float("ema_decay",       0.998,  0.9994, log=True),
-        "label_smoothing": trial.suggest_float("label_smoothing", 0.0,    0.06),
+        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
+        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
+        # ─── Searched: phase-2 training-procedure HP ─────────────────────
+        "lr_schedule":      trial.suggest_categorical(
+            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
+        ),
+        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
+        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
     }
 
 
@@ -251,12 +242,7 @@ def main():
         trial.set_user_attr("per_seed_val_auc", aucs)
         return float(np.mean(aucs))
 
-    # iter6 direction switch: TPESampler → CmaEsSampler. n_startup_trials=5
-    # gives a small Sobol-style warm-start before CMA-ES kicks in; with
-    # popsize default (4 + floor(3 ln 4) = 8) and 30 trials, we get
-    # 5 warmup + ~3 CMA-ES generations of exploitation in the narrow
-    # iter1-5 top region.
-    sampler = CmaEsSampler(seed=args.sampler_seed, n_startup_trials=5)
+    sampler = TPESampler(seed=args.sampler_seed, n_startup_trials=15, multivariate=True)
     pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=5)
     study = optuna.create_study(
         direction="maximize",
