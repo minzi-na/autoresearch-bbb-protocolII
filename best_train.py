@@ -113,9 +113,6 @@ BASE_CONFIG = {
     "label_smoothing":     0.0,         # BCE target smoothing in [0, 1)
     "ema_decay":           0.9993,      # was hardcoded; now overridable
     "ema_warmup_epochs":   1,           # was hardcoded; now overridable
-    # iter10: untangle the iter38-frozen lr_multiplier=1.25 inside the AdamW
-    # override. Default 1.25 reproduces phase-1 byte-for-byte.
-    "lr_multiplier":       1.25,        # effective AdamW lr = lr * lr_multiplier
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -309,8 +306,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc",
                 ema_decay=0.9993, ema_warmup_epochs=1,
                 label_smoothing=0.0,
-                lr_schedule="constant", lr_warmup_epochs=0, lr_min_ratio=0.0,
-                lr_multiplier=1.25):
+                lr_schedule="constant", lr_warmup_epochs=0, lr_min_ratio=0.0):
     if es_metric == "val_loss":
         best_score = float("inf")
         is_better  = lambda new, cur: new < cur
@@ -323,9 +319,7 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
     # iter38: replace the passed-in Adam (wd=1e-5 ~ effectively 0) with AdamW
     # using decoupled wd=0.01 — a real weight-decay regularizer to complement
     # EMA / DropPath / mod_drop, with the same lr as before.
-    # iter10 (phase-2): the 1.25 multiplier is now caller-provided via
-    # lr_multiplier (default 1.25 reproduces iter38 frozen state).
-    lr = optimizer.param_groups[0]["lr"] * lr_multiplier
+    lr = optimizer.param_groups[0]["lr"] * 1.25
     # iter88: AdamW wd 0.01 -> 0.005 on R-Drop stack. iter40 was a failure
     # without R-Drop; R-Drop adds reg, so the optimal explicit wd may shift
     # lower (similar to mod_drop / head dropout reductions in iter83/iter86).
@@ -617,7 +611,6 @@ def build_and_train(
         lr_schedule=cfg.get("lr_schedule", "constant"),
         lr_warmup_epochs=cfg.get("lr_warmup_epochs", 0),
         lr_min_ratio=cfg.get("lr_min_ratio", 0.0),
-        lr_multiplier=cfg.get("lr_multiplier", 1.25),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
@@ -713,8 +706,7 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
                              ema_decay=0.9993, ema_warmup_epochs=1,
                              label_smoothing=0.0,
                              lr_schedule="constant",
-                             lr_warmup_epochs=0, lr_min_ratio=0.0,
-                             lr_multiplier=1.25):
+                             lr_warmup_epochs=0, lr_min_ratio=0.0):
     """Mirror of train_model with Optuna pruning. Reports best-so-far score
     each epoch and raises TrialPruned if the pruner says so."""
     import optuna
@@ -729,8 +721,7 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
         raise ValueError(f"Unknown es_metric: {es_metric}")
 
     # Same AdamW override as train_model (iter38/88/148/172 frozen).
-    # iter10 (phase-2): lr_multiplier now caller-provided (default 1.25).
-    lr = optimizer.param_groups[0]["lr"] * lr_multiplier
+    lr = optimizer.param_groups[0]["lr"] * 1.25
     decay_params, no_decay_params = [], []
     for n, p in model.named_parameters():
         if not p.requires_grad:
@@ -933,7 +924,6 @@ def build_and_train_with_pruning(
         lr_schedule=cfg.get("lr_schedule", "constant"),
         lr_warmup_epochs=cfg.get("lr_warmup_epochs", 0),
         lr_min_ratio=cfg.get("lr_min_ratio", 0.0),
-        lr_multiplier=cfg.get("lr_multiplier", 1.25),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)

@@ -113,16 +113,10 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter10 design (family G — expose-training-loop-constant):
-      - Direction switch from family F (model-side: head_dropout/mod_drop_p,
-        2 consec discard at iter8/9) to family G — un-hardcode lr_multiplier
-        (was 1.25 frozen since iter38, predating R-Drop/split-wd/cosine).
-      - Pin lr_schedule=cosine + lr_warmup=0 (iter1-5 top region unanimous).
-      - Narrow lr/lr_min_ratio/ema_decay/label_smoothing at iter4 top cluster.
-      - New 1-D: lr_multiplier ∈ [0.9, 1.6] uniform. Effective AdamW lr =
-        BASE_CONFIG.lr × lr_multiplier. iter9 next-hint flagged this lever.
-      - adamw_wd / rdrop_alpha_max stay hardcoded (iter3/iter5 finding:
-        phase-1 frozen values were near-optimal, within search noise).
+    iter1 starting design: pin structural at iter197 best; explore lr
+    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
+    five new phase-2 lever HP. 6-D narrow search to validate the
+    phase-2 surface before opening it up.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -131,16 +125,16 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Pinned at iter1-5 unanimous best ────────────────────────────
-        "lr_schedule":      "cosine",
-        "lr_warmup_epochs": 0,
-        # ─── Searched: narrow at iter4 top cluster ───────────────────────
-        "lr":             trial.suggest_float("lr", 1.0e-4, 1.4e-4, log=True),
-        "lr_min_ratio":   trial.suggest_float("lr_min_ratio", 0.10, 0.28),
-        "ema_decay":      trial.suggest_float("ema_decay", 0.998, 0.9994, log=True),
-        "label_smoothing": trial.suggest_float("label_smoothing", 0.02, 0.06),
-        # ─── Searched: NEW iter10 lever (family G) ───────────────────────
-        "lr_multiplier":  trial.suggest_float("lr_multiplier", 0.9, 1.6),
+        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
+        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
+        # ─── Searched: phase-2 training-procedure HP ─────────────────────
+        "lr_schedule":      trial.suggest_categorical(
+            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
+        ),
+        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
+        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
     }
 
 
