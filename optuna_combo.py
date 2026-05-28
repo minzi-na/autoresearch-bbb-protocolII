@@ -113,10 +113,18 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter1 starting design: pin structural at iter197 best; explore lr
-    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
-    five new phase-2 lever HP. 6-D narrow search to validate the
-    phase-2 surface before opening it up.
+    iter11 design (family H — expose-training-loop-constant, R-Drop side):
+      - Direction switch from family G (lr_multiplier — found fully redundant
+        with lr; top region effective AdamW lr 1.37-1.60e-4 ~ iter197 anchor).
+      - Un-hardcode rdrop_warmup_epochs (was 5 frozen since iter106; never
+        swept in phase-1 nor phase-2). iter5 next-hint flagged this lever.
+      - Pin lr_schedule=cosine + lr_warmup=0 (iter1-5 unanimous).
+      - Narrow lr/lr_min_ratio/ema_decay/label_smoothing at iter4 cluster
+        (same as iter10 except no lr_multiplier).
+      - New 1-D: rdrop_warmup_epochs ∈ {2, 3, 5, 7, 10} categorical. Tests
+        whether the R-Drop alpha ramp-up speed (consistency-loss build-up
+        rate) matters under the current iter197 stack.
+      - rdrop_alpha_max / adamw_wd / lr_multiplier stay hardcoded.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -125,16 +133,18 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
-        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
-        # ─── Searched: phase-2 training-procedure HP ─────────────────────
-        "lr_schedule":      trial.suggest_categorical(
-            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
+        # ─── Pinned at iter1-5 unanimous best ────────────────────────────
+        "lr_schedule":      "cosine",
+        "lr_warmup_epochs": 0,
+        # ─── Searched: narrow at iter4 top cluster ───────────────────────
+        "lr":             trial.suggest_float("lr", 1.0e-4, 1.4e-4, log=True),
+        "lr_min_ratio":   trial.suggest_float("lr_min_ratio", 0.10, 0.28),
+        "ema_decay":      trial.suggest_float("ema_decay", 0.998, 0.9994, log=True),
+        "label_smoothing": trial.suggest_float("label_smoothing", 0.02, 0.06),
+        # ─── Searched: NEW iter11 lever (family H) ───────────────────────
+        "rdrop_warmup_epochs": trial.suggest_categorical(
+            "rdrop_warmup_epochs", [2, 3, 5, 7, 10],
         ),
-        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
-        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
-        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
-        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
     }
 
 

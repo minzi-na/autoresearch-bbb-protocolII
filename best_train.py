@@ -113,6 +113,9 @@ BASE_CONFIG = {
     "label_smoothing":     0.0,         # BCE target smoothing in [0, 1)
     "ema_decay":           0.9993,      # was hardcoded; now overridable
     "ema_warmup_epochs":   1,           # was hardcoded; now overridable
+    # iter11: untangle the iter106-frozen rdrop_warmup_epochs=5 inside the
+    # R-Drop alpha linear-warmup. Default 5 reproduces phase-1 byte-for-byte.
+    "rdrop_warmup_epochs": 5,           # epochs over which rdrop_alpha ramps 0 -> 1
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -306,7 +309,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
                 num_epochs=50, patience=10, es_metric="val_auc",
                 ema_decay=0.9993, ema_warmup_epochs=1,
                 label_smoothing=0.0,
-                lr_schedule="constant", lr_warmup_epochs=0, lr_min_ratio=0.0):
+                lr_schedule="constant", lr_warmup_epochs=0, lr_min_ratio=0.0,
+                rdrop_warmup_epochs=5):
     if es_metric == "val_loss":
         best_score = float("inf")
         is_better  = lambda new, cur: new < cur
@@ -402,7 +406,8 @@ def train_model(model, optimizer, train_loader, val_loader, loss_fn,
             # iter106: warmup R-Drop alpha 0 -> 1.0 over first 5 epochs (linear).
             # Defer consistency penalty until model has learned useful features,
             # avoiding penalizing noise-driven predictions in epoch 0-1.
-            rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
+            # iter11 (phase-2): rdrop_warmup_epochs caller-provided (default 5).
+            rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / float(rdrop_warmup_epochs))
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
             optimizer.step()
@@ -611,6 +616,7 @@ def build_and_train(
         lr_schedule=cfg.get("lr_schedule", "constant"),
         lr_warmup_epochs=cfg.get("lr_warmup_epochs", 0),
         lr_min_ratio=cfg.get("lr_min_ratio", 0.0),
+        rdrop_warmup_epochs=cfg.get("rdrop_warmup_epochs", 5),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
@@ -706,7 +712,8 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
                              ema_decay=0.9993, ema_warmup_epochs=1,
                              label_smoothing=0.0,
                              lr_schedule="constant",
-                             lr_warmup_epochs=0, lr_min_ratio=0.0):
+                             lr_warmup_epochs=0, lr_min_ratio=0.0,
+                             rdrop_warmup_epochs=5):
     """Mirror of train_model with Optuna pruning. Reports best-so-far score
     each epoch and raises TrialPruned if the pruner says so."""
     import optuna
@@ -775,7 +782,8 @@ def train_model_with_pruning(model, optimizer, train_loader, val_loader, loss_fn
                      + (1 - p1) * ((1 - p1).log() - (1 - p2).log())).mean()
             kl_21 = (p2 * (p2.log() - p1.log())
                      + (1 - p2) * ((1 - p2).log() - (1 - p1).log())).mean()
-            rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / 5.0)
+            # iter11 (phase-2): rdrop_warmup_epochs caller-provided (default 5).
+            rdrop_alpha = 1.0 * min(1.0, (epoch + 1) / float(rdrop_warmup_epochs))
             loss = bce_loss + rdrop_alpha * 0.5 * (kl_12 + kl_21)
             loss.backward()
             optimizer.step()
@@ -924,6 +932,7 @@ def build_and_train_with_pruning(
         lr_schedule=cfg.get("lr_schedule", "constant"),
         lr_warmup_epochs=cfg.get("lr_warmup_epochs", 0),
         lr_min_ratio=cfg.get("lr_min_ratio", 0.0),
+        rdrop_warmup_epochs=cfg.get("rdrop_warmup_epochs", 5),
     )
 
     val_metrics, _, _ = eval_model(model, val_loader)
