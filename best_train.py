@@ -113,9 +113,6 @@ BASE_CONFIG = {
     "label_smoothing":     0.0,         # BCE target smoothing in [0, 1)
     "ema_decay":           0.9993,      # was hardcoded; now overridable
     "ema_warmup_epochs":   1,           # was hardcoded; now overridable
-    # iter9: un-hardcoded mod_drop_p (was iter83-frozen at 0.10 inside
-    # MultiModalGMLPFromFlat). Default 0.10 keeps phase-1 byte-identical.
-    "mod_drop_p":          0.10,
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -220,8 +217,7 @@ class gMLP(nn.Module):
 
 class MultiModalGMLPFromFlat(nn.Module):
     def __init__(self, mod_dims: OrderedDict, d_model=512, d_ffn=1024,
-                 depth=4, dropout=0.2, use_gated_pool=True,
-                 mod_drop_p=0.10):
+                 depth=4, dropout=0.2, use_gated_pool=True):
         super().__init__()
         self.mod_names = list(mod_dims.keys())
         self.mod_dims  = [mod_dims[n] for n in self.mod_names]
@@ -257,9 +253,7 @@ class MultiModalGMLPFromFlat(nn.Module):
         # iter83: mod_drop 0.15 -> 0.10 on top of R-Drop. R-Drop provides
         # consistency-based regularization; reducing explicit token-zero
         # noise may free up signal that R-Drop is already protecting.
-        # Phase-2 iter9: exposed as constructor kwarg; default 0.10 keeps
-        # the phase-1 byte-identical baseline when build_and_train(config=None).
-        self.mod_drop_p = float(mod_drop_p)
+        self.mod_drop_p = 0.10
 
     def forward(self, x):
         chunks = torch.split(x, self.mod_dims, dim=1)
@@ -593,7 +587,6 @@ def build_and_train(
         depth=cfg["depth"],
         dropout=cfg["dropout"],
         use_gated_pool=cfg["use_gated_pool"],
-        mod_drop_p=cfg.get("mod_drop_p", 0.10),
     ).to(device)
 
     # The Adam optimizer here is read for its lr only — train_model
@@ -910,7 +903,6 @@ def build_and_train_with_pruning(
         depth=cfg["depth"],
         dropout=cfg["dropout"],
         use_gated_pool=cfg["use_gated_pool"],
-        mod_drop_p=cfg.get("mod_drop_p", 0.10),
     ).to(device)
 
     optimizer = optim.Adam(

@@ -113,17 +113,10 @@ def _holdout_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def suggest_config(trial: optuna.Trial) -> dict:
     """Return a config dict layered on top of BASE_CONFIG.
 
-    iter9 design (family F continuation = expose-model-HP):
-      - un-hardcode mod_drop_p (was iter83-frozen at 0.10 inside the
-        MultiModalGMLPFromFlat class; iter8 already exposed head_dropout
-        via the same constructor-kwarg pattern). Search 0.05..0.20.
-      - Pin lr_schedule="cosine", lr_warmup_epochs=0 (iter1-5 unanimous
-        from the conclusion.md top-region scan).
-      - Narrow lr / lr_min_ratio / ema_decay / label_smoothing at the
-        iter4 confirm cluster (iter4 was the best phase-2 attempt at
-        0.854504; -0.000443 vs threshold).
-      - 5-D continuous search (4 training-side HP + 1 model-side HP).
-      - TPE sampler retained — iter6/7 CmaEs at 30 trials was undersampled.
+    iter1 starting design: pin structural at iter197 best; explore lr
+    around phase-1 anchor (effective AdamW lr = 1.25 × this) and the
+    five new phase-2 lever HP. 6-D narrow search to validate the
+    phase-2 surface before opening it up.
     """
     return {
         # ─── Pinned at iter197 frozen architecture ───────────────────────
@@ -132,16 +125,16 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "depth":          4,
         "use_gated_pool": True,
         "batch_size":     128,
-        # ─── Pinned phase-2 winners (iter1-5 unanimous) ──────────────────
-        "lr_schedule":      "cosine",
-        "lr_warmup_epochs": 0,
-        # ─── Searched: narrow iter4 cluster (4 training HP) ──────────────
-        "lr":             trial.suggest_float("lr", 1.0e-4, 1.4e-4, log=True),
-        "lr_min_ratio":   trial.suggest_float("lr_min_ratio", 0.10, 0.28),
-        "ema_decay":      trial.suggest_float("ema_decay", 0.998, 0.9994, log=True),
-        "label_smoothing":trial.suggest_float("label_smoothing", 0.02, 0.06),
-        # ─── Searched: new model-side lever (iter9) ──────────────────────
-        "mod_drop_p":     trial.suggest_float("mod_drop_p", 0.05, 0.20),
+        # ─── Searched: lr (Adam input; AdamW lr = 1.25 × this) ───────────
+        "lr":             trial.suggest_float("lr", 5e-5, 2e-4, log=True),
+        # ─── Searched: phase-2 training-procedure HP ─────────────────────
+        "lr_schedule":      trial.suggest_categorical(
+            "lr_schedule", ["constant", "cosine", "warmup_cosine"],
+        ),
+        "lr_warmup_epochs": trial.suggest_int("lr_warmup_epochs", 0, 10),
+        "lr_min_ratio":     trial.suggest_float("lr_min_ratio", 0.0, 0.3),
+        "label_smoothing":  trial.suggest_float("label_smoothing", 0.0, 0.1),
+        "ema_decay":        trial.suggest_float("ema_decay", 0.99, 0.9999, log=True),
     }
 
 
