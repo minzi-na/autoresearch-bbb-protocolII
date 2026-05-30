@@ -103,6 +103,11 @@ BASE_CONFIG = {
     "lr_min_ratio":        0.0,         # cosine eta_min = lr * lr_min_ratio
     "label_smoothing":     0.0,         # BCE target smoothing in [0, 1)
     "ema_decay":           0.999,       # was hardcoded in train_model; now overridable
+    # Phase-2 iter19: optimizer-family lever. "adamw" reproduces the
+    # phase-1 optim.AdamW construction byte-for-byte; "radam" / "nadam"
+    # use decoupled_weight_decay=True so the decay/no-decay param-group
+    # split keeps AdamW-style decoupled WD semantics.
+    "optimizer_type":      "adamw",     # "adamw" / "radam" / "nadam"
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -510,12 +515,12 @@ def build_and_train(
             no_decay_params.append(p)
         else:
             decay_params.append(p)
-    optimizer = optim.AdamW(
+    optimizer = _build_optimizer(
         [
             {"params": decay_params, "weight_decay": cfg["weight_decay"]},
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
-        lr=cfg["lr"],
+        cfg,
     )
     loss_fn = nn.BCEWithLogitsLoss()
     scheduler = _build_lr_scheduler(optimizer, cfg)
@@ -533,6 +538,26 @@ def build_and_train(
 
     val_metrics, _, _ = eval_model(model, val_loader)
     return model, train_info, val_metrics, scaler
+
+
+def _build_optimizer(param_groups, cfg: dict):
+    """Construct the optimizer from cfg["optimizer_type"] (phase-2 iter19).
+
+    "adamw" (default) reproduces the phase-1 construction byte-for-byte:
+    optim.AdamW over the decay / no-decay param groups with lr=cfg["lr"].
+    "radam" / "nadam" use decoupled_weight_decay=True so the param-group
+    no-decay split keeps the same decoupled-WD semantics as AdamW; only
+    the update rule (rectified adaptive variance / Nesterov momentum)
+    differs, making this a clean optimizer-family lever.
+    """
+    opt = cfg.get("optimizer_type", "adamw")
+    if opt == "adamw":
+        return optim.AdamW(param_groups, lr=cfg["lr"])
+    if opt == "radam":
+        return optim.RAdam(param_groups, lr=cfg["lr"], decoupled_weight_decay=True)
+    if opt == "nadam":
+        return optim.NAdam(param_groups, lr=cfg["lr"], decoupled_weight_decay=True)
+    raise ValueError(f"Unknown optimizer_type: {opt!r}")
 
 
 def _build_lr_scheduler(optimizer, cfg: dict):
@@ -796,12 +821,12 @@ def build_and_train_with_pruning(
             no_decay_params.append(p)
         else:
             decay_params.append(p)
-    optimizer = optim.AdamW(
+    optimizer = _build_optimizer(
         [
             {"params": decay_params, "weight_decay": cfg["weight_decay"]},
             {"params": no_decay_params, "weight_decay": 0.0},
         ],
-        lr=cfg["lr"],
+        cfg,
     )
     loss_fn = nn.BCEWithLogitsLoss()
     scheduler = _build_lr_scheduler(optimizer, cfg)

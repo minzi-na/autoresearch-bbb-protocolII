@@ -113,6 +113,14 @@ def suggest_config(trial: optuna.Trial) -> dict:
     dense exploitation. If a low-wd / low-dropout combination exists
     that exceeds iter3 trial#7's val 0.852850, iter10 finds it; if
     not, the cluster is empirically ruled out for combo2.
+
+    iter19 (resume past ceiling 18): keep the iter11 KEEP base (low-wd
+    6-D box + 7-seed objective) but add the first untried lever class
+    of phase-2 -- optimizer family. optimizer_type is searched over
+    {adamw, radam, nadam}; adamw reproduces the phase-1/iter11 path
+    byte-for-byte, radam/nadam are decoupled-WD variants whose update
+    rule differs. All space/sampler/pruner/objective/training-proc
+    levers were exhausted iter1-18; optimizer family was never probed.
     """
     return {
         # ─── Searched in iter10 (6-D narrow on low-wd / low-dropout) ─────
@@ -122,6 +130,9 @@ def suggest_config(trial: optuna.Trial) -> dict:
         "drop_path":     trial.suggest_float("drop_path", 0.0, 0.05),
         "mod_drop_p":    trial.suggest_float("mod_drop_p", 0.0, 0.15),
         "head_dropout":  trial.suggest_float("head_dropout", 0.0, 0.15),
+        # ─── Searched in iter19 (optimizer-family lever) ─────────────────
+        "optimizer_type": trial.suggest_categorical(
+            "optimizer_type", ["adamw", "radam", "nadam"]),
         # ─── Pinned at iter3 trial#7 architecture HP ─────────────────────
         "batch_size":          128,
         "grad_clip_max_norm":  1.1357825728372695,
