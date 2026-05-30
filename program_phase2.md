@@ -165,11 +165,16 @@ For each iteration `N`:
   family of change (e.g., 3 narrowing attempts in a row), switch to a
   qualitatively different design (e.g., change sampler instead of
   narrowing search space).
-- **Run ceiling:** absolute max of 18 iterations regardless of keep/
-  discard mix. If 18 reached without a definitive conclusion, summarize
+- **Run ceiling:** absolute max of 24 iterations regardless of keep/
+  discard mix. If 24 reached without a definitive conclusion, summarize
   and stop. (Originally 12, extended to 18 from iter11+ to allow a
   bbb-combo1-style narrowing cycle of 5-6 iter on the iter10 low-wd
-  cluster before declaring plateau.)
+  cluster before declaring plateau; extended 18 -> 24 on 2026-05-30 by
+  user decision to resume the loop past the iter18 holdout breakthrough.
+  On resume the 5-consecutive-discard counter is reset to 0 from iter19
+  -- the user's extend-and-continue directive overrides the trigger that
+  had already fired at iter12-18, so the fresh segment iter19-24 gets a
+  clean 5-consecutive-discard early-stop budget.)
 - **Autonomy (default for this loop):** the agent chooses each iter's
   design lever using prior iter `note` rows + study JSON top-region
   summaries + architecture_log holdout signal as guide, then runs the
