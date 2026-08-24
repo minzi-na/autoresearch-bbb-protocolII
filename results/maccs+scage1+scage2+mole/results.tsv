@@ -1,0 +1,201 @@
+iter	timestamp	commit	combo	split_mode	n_seeds	mean_val_auc	std_val_auc	mean_val_mcc	std_val_mcc	mean_val_loss	wall_time_min	keep	note
+1	2026-05-17T19:36:49	39cc30d0eb	maccs+scage1+scage2+mole	scaffold	10	0.84636	0.004674	0.515158	0.02364	0.557174	2.56	True	baseline reproduction
+2	2026-05-17T19:43:49	9f6a4482d2	maccs+scage1+scage2+mole	scaffold	10	0.843695	0.003593	0.516355	0.016236	0.599311	2.43	False	AdamW + warmup(5)/cosine + grad-clip(1.0)
+3	2026-05-17T19:46:57	63eabf61f6	maccs+scage1+scage2+mole	scaffold	10	0.845723	0.004654	0.512631	0.015488	0.446905	2.07	False	pos_weight=n_neg/n_pos in BCEWithLogitsLoss
+4	2026-05-17T19:49:28	a065ebd29c	maccs+scage1+scage2+mole	scaffold	10	0.843202	0.00417	0.515904	0.016932	0.413438	1.67	False	label smoothing (smooth=0.1)
+5	2026-05-17T19:52:25	4e9172eaf3	maccs+scage1+scage2+mole	scaffold	10	0.842532	0.004796	0.509248	0.024817	0.550815	2.13	False	LayerNorm after per-modality projection
+6	2026-05-17T19:55:43	35b7d1f556	maccs+scage1+scage2+mole	scaffold	10	0.845692	0.005947	0.510956	0.029459	0.554579	2.1	False	modality dropout (p=0.15)
+7	2026-05-17T19:58:38	a5a82e556a	maccs+scage1+scage2+mole	scaffold	10	0.846429	0.004826	0.513955	0.024077	0.545646	2.02	True	sigmoid skip-gate mix between gated and mean pool
+8	2026-05-17T20:05:15	576853d8e8	maccs+scage1+scage2+mole	scaffold	10	0.846898	0.005222	0.521451	0.01217	0.555364	2.66	True	cross-modal FiLM (category-based, safe-init)
+9	2026-05-18T01:17:45	a9b2f1e951	maccs+scage1+scage2+mole	scaffold	10	0.847554	0.004658	0.52395	0.011441	0.555746	5.61	True	attention pooling (replaces gated softmax)
+10	2026-05-18T01:29:58	722d463bf9	maccs+scage1+scage2+mole	scaffold	10	0.847044	0.00497	0.523583	0.012084	0.556886	5.83	False	learnable residual scale on SGU spatial path
+11	2026-05-18T01:35:43	b6b620d891	maccs+scage1+scage2+mole	scaffold	10	0.841515	0.004904	0.509381	0.026043	0.570236	5.0	False	2-layer per-modality projection (Linear-GELU-Linear)
+12	2026-05-18T01:42:27	566acf381d	maccs+scage1+scage2+mole	scaffold	10	0.848406	0.003841	0.519219	0.007555	0.545021	5.84	True	multi-head SGU (n_heads=2)
+13	2026-05-18T01:55:37	a9a8f24a23	maccs+scage1+scage2+mole	scaffold	10	0.849288	0.00306	0.519729	0.010815	0.551758	5.98	True	AdaLN-Zero variant of cross-modal FiLM
+14	2026-05-18T02:08:03	e2870f14af	maccs+scage1+scage2+mole	scaffold	10	0.847023	0.002643	0.515082	0.013823	0.54387	5.16	False	CLS token pooling (seq_len+=1)
+15	2026-05-18T02:15:21	25cafdfc66	maccs+scage1+scage2+mole	scaffold	10	0.847365	0.003521	0.517116	0.00912	0.560539	6.36	False	stochastic depth on gMLPBlocks (p=0.05)
+16	2026-05-18T02:25:38	945e983a60	maccs+scage1+scage2+mole	scaffold	10	0.844864	0.003862	0.522544	0.014252	0.581527	8.94	False	diagonal-masked multi-head attention SGU
+17	2026-05-18T02:40:25	de012f8e5b	maccs+scage1+scage2+mole	scaffold	10	0.613891	0.051695	0.135952	0.072069	0.636457	13.52	False	EMA of weights (decay=0.999) for ES snapshot
+18	2026-05-18T02:46:32	687c0852e1	maccs+scage1+scage2+mole	scaffold	10	0.847625	0.002417	0.525781	0.009344	0.539688	5.23	False	multi-head SGU n_heads=4
+19	2026-05-18T02:53:02	3ef90c0020	maccs+scage1+scage2+mole	scaffold	10	0.846565	0.002455	0.515228	0.013443	0.56762	5.75	False	modality dropout p=0.05
+20	2026-05-18T03:00:24	2e2ebee454	maccs+scage1+scage2+mole	scaffold	10	0.849562	0.00313	0.518644	0.009752	0.555083	6.0	True	multi-query attention pool (k=2)
+21	2026-05-18T03:12:55	abc0cf13a3	maccs+scage1+scage2+mole	scaffold	10	0.849292	0.003055	0.519729	0.010815	0.551754	5.64	False	multi-query attention pool k=3
+22	2026-05-18T03:18:21	cf738fbd29	maccs+scage1+scage2+mole	scaffold	10	0.846312	0.003162	0.519826	0.009636	0.529844	4.91	False	pool_queries normal init std=0.02
+23	2026-05-18T03:24:39	8617e3f2f3	maccs+scage1+scage2+mole	scaffold	10	0.84929	0.003058	0.519729	0.010815	0.551757	5.67	False	multi-query attention pool k=4
+24	2026-05-18T03:31:57	25d9eb409e	maccs+scage1+scage2+mole	scaffold	10	0.846178	0.004166	0.509572	0.015976	0.587343	6.1	False	post-FiLM LayerNorm
+25	2026-05-18T03:38:55	083e41c6ca	maccs+scage1+scage2+mole	scaffold	10	0.846916	0.003564	0.515786	0.01689	0.528576	6.18	False	AdaLN-FiLM after backbone
+26	2026-05-18T03:45:22	7e731478c4	maccs+scage1+scage2+mole	scaffold	10	0.848142	0.002897	0.522863	0.015987	0.558643	5.81	False	gradient clipping max_norm=1.0 only
+27	2026-05-18T03:51:36	513bda5a4a	maccs+scage1+scage2+mole	scaffold	10	0.848399	0.003831	0.529237	0.015835	0.505681	5.68	False	skip-gate mix attention-pool vs max-pool
+28	2026-05-18T04:02:31	f0eb9a1045	maccs+scage1+scage2+mole	scaffold	10	0.84927	0.003042	0.518195	0.010025	0.553163	5.24	False	AdaLN learnable LN affine=True
+29	2026-05-18T04:14:00	f5a6956b9d	maccs+scage1+scage2+mole	scaffold	10	0.850914	0.002194	0.53214	0.008505	0.492146	10.53	True	EMA decay=0.95 (responsive)
+30	2026-05-18T04:31:45	ca5c026835	maccs+scage1+scage2+mole	scaffold	10	0.851715	0.002492	0.534168	0.011562	0.482962	7.22	True	EMA decay=0.9
+31	2026-05-18T04:45:55	04fecd3b4a	maccs+scage1+scage2+mole	scaffold	10	0.851492	0.002259	0.534797	0.011129	0.500265	5.82	False	EMA decay=0.8
+32	2026-05-18T04:53:10	f68ad0076f	maccs+scage1+scage2+mole	scaffold	10	0.851586	0.002427	0.532207	0.005903	0.503606	6.86	False	EMA decay=0.85
+33	2026-05-18T05:01:36	b240548798	maccs+scage1+scage2+mole	scaffold	10	0.850613	0.00286	0.534944	0.014979	0.483255	7.82	False	n_heads=4 + EMA=0.9
+34	2026-05-18T05:09:31	776c9f7ffe	maccs+scage1+scage2+mole	scaffold	10	0.852454	0.002167	0.539884	0.012269	0.490796	7.44	True	grad-clip(1.0) + EMA=0.9
+35	2026-05-18T05:24:37	e2e2c56ee6	maccs+scage1+scage2+mole	scaffold	10	0.852168	0.002435	0.536346	0.00897	0.487879	6.93	False	grad-clip(0.5) + EMA=0.9
+36	2026-05-18T05:32:26	8683242800	maccs+scage1+scage2+mole	scaffold	10	0.851955	0.002593	0.533357	0.012222	0.502982	7.31	False	grad-clip(2.0) + EMA=0.9
+37	2026-05-18T05:41:09	7469d17e8f	maccs+scage1+scage2+mole	scaffold	10	0.852436	0.002249	0.534357	0.009672	0.499214	7.93	False	AdamW + EMA=0.9 + grad-clip(1.0)
+38	2026-05-18T05:49:04	f5275f3f5f	maccs+scage1+scage2+mole	scaffold	10	0.852228	0.002199	0.536051	0.012563	0.500122	7.3	False	modality dropout p=0.05 + EMA + grad-clip
+39	2026-05-18T05:56:11	7d245be689	maccs+scage1+scage2+mole	scaffold	10	0.850992	0.00339	0.540673	0.009558	0.4036	6.59	False	label smoothing=0.05 + EMA + grad-clip
+40	2026-05-18T06:04:08	dcd2baefec	maccs+scage1+scage2+mole	scaffold	10	0.851563	0.00239	0.537338	0.01048	0.49999	7.27	False	warmup(2)+cosine + EMA + grad-clip
+41	2026-05-18T06:13:43	2bfcec2dd4	maccs+scage1+scage2+mole	scaffold	10	0.85232	0.002385	0.535889	0.01064	0.515688	9.02	False	EMA decay=0.92 + grad-clip
+42	2026-05-18T06:21:41	c3d1220f74	maccs+scage1+scage2+mole	scaffold	10	0.852444	0.002962	0.538198	0.013321	0.481629	7.33	False	head dropout=0.1
+43	2026-05-18T06:29:53	954f161e43	maccs+scage1+scage2+mole	scaffold	10	0.852561	0.002149	0.537687	0.010354	0.499702	7.49	True	remove skip-gate mix (attn pool only)
+44	2026-05-18T06:45:42	95ddc90dcf	maccs+scage1+scage2+mole	scaffold	10	0.852529	0.002256	0.537174	0.011755	0.504555	7.86	False	pool_queries k=3 retry
+45	2026-05-18T06:53:05	37edaf5240	maccs+scage1+scage2+mole	scaffold	10	0.852449	0.002317	0.53793	0.011292	0.489046	6.87	False	pool_queries k=1
+46	2026-05-18T07:00:33	fe01424ed9	maccs+scage1+scage2+mole	scaffold	10	0.85067	0.002708	0.534052	0.009135	0.468446	6.95	False	weight_decay=1e-3 override
+47	2026-05-18T07:08:40	15481d97e9	maccs+scage1+scage2+mole	scaffold	10	0.852417	0.00224	0.537278	0.010061	0.484589	7.66	False	weight_decay=1e-4
+48	2026-05-18T07:16:56	648fafd459	maccs+scage1+scage2+mole	scaffold	10	0.852354	0.002399	0.537518	0.011796	0.489973	7.33	False	per-modality scale (init=1)
+49	2026-05-18T07:24:22	3678731160	maccs+scage1+scage2+mole	scaffold	10	0.852034	0.00238	0.536905	0.010093	0.483166	6.85	False	SiLU (replaces GELU)
+50	2026-05-18T07:32:35	add5654682	maccs+scage1+scage2+mole	scaffold	10	0.851018	0.002949	0.53643	0.013425	0.466688	7.71	False	SGU n_heads=8
+51	2026-05-18T07:40:57	1cd25fd3fe	maccs+scage1+scage2+mole	scaffold	10	0.852076	0.002843	0.54217	0.009543	0.454852	7.84	False	remove pre-head LayerNorm
+52	2026-05-18T07:47:58	63a1e0487f	maccs+scage1+scage2+mole	scaffold	10	0.852538	0.002246	0.538043	0.011322	0.49463	6.49	False	learnable pool temperature
+53	2026-05-18T07:55:39	854478f8c5	maccs+scage1+scage2+mole	scaffold	10	0.852414	0.001138	0.539286	0.0133	0.478104	7.1	False	NAdam optimizer
+54	2026-05-18T08:05:04	9c72e703ec	maccs+scage1+scage2+mole	scaffold	10	0.852561	0.002149	0.537687	0.010354	0.499702	8.82	True	patience=15
+55	2026-05-18T08:26:23	af62d321a4	maccs+scage1+scage2+mole	scaffold	10	0.848901	0.002681	0.532288	0.01286	0.556389	10.81	False	lr=5e-5
+56	2026-05-18T08:36:01	089ad5bf24	maccs+scage1+scage2+mole	scaffold	10	0.851943	0.002584	0.537497	0.00857	0.47247	9.06	False	2-layer MLP head
+57	2026-05-18T08:45:35	4dbe5786c7	maccs+scage1+scage2+mole	scaffold	10	0.85249	0.002022	0.536104	0.011594	0.500292	8.97	False	EMA decay=0.91
+58	2026-05-18T08:54:39	968f2a2d8b	maccs+scage1+scage2+mole	scaffold	10	0.852401	0.002261	0.537023	0.010955	0.490798	8.43	False	Gaussian token noise sigma=0.01
+59	2026-05-18T09:03:46	02f0852889	maccs+scage1+scage2+mole	scaffold	10	0.846611	0.00299	0.539559	0.011465	0.513352	8.38	False	SquaredReLU
+60	2026-05-18T09:13:30	d05c155f73	maccs+scage1+scage2+mole	scaffold	10	0.84898	0.002942	0.532476	0.01231	0.475843	8.87	False	retry LN after projection
+61	2026-05-18T09:23:01	6195e43575	maccs+scage1+scage2+mole	scaffold	10	0.851638	0.002497	0.535088	0.011859	0.48403	8.68	False	clip_grad_value(0.5)
+62	2026-05-18T09:30:57	81205c2caf	maccs+scage1+scage2+mole	scaffold	10	0.852243	0.002594	0.537466	0.010155	0.463741	7.32	False	lr=2e-4
+63	2026-05-18T09:40:50	a1ad813b53	maccs+scage1+scage2+mole	scaffold	10	0.845277	0.003728	0.524476	0.008684	0.522319	9.13	False	SGU bias init=0
+64	2026-05-18T09:50:32	8e3e0ce117	maccs+scage1+scage2+mole	scaffold	10	0.851089	0.00181	0.540503	0.00785	0.466789	9.15	False	depth=5
+65	2026-05-18T09:59:40	a2d768e3dc	maccs+scage1+scage2+mole	scaffold	10	0.852552	0.001919	0.539161	0.013503	0.480407	8.46	False	grad-clip 0.7
+66	2026-05-18T10:09:29	62a3650208	maccs+scage1+scage2+mole	scaffold	10	0.852506	0.002277	0.535739	0.010281	0.509511	8.85	False	per-step EMA decay=0.998
+67	2026-05-18T10:18:31	e6a5adf485	maccs+scage1+scage2+mole	scaffold	10	0.851774	0.002459	0.535375	0.009893	0.481559	7.68	False	pre/post backbone residual
+68	2026-05-18T14:43:17	2edefddcf4	maccs+scage1+scage2+mole	scaffold	10	0.851318	0.001544	0.525679	0.010999	0.404232	5.83	False	pos_weight = n_neg/n_pos
+69	2026-05-18T14:53:29	6f913c4f6e	maccs+scage1+scage2+mole	scaffold	10	0.85133	0.002799	0.537459	0.011293	0.475364	8.65	False	stochastic depth p=0.05
+70	2026-05-18T15:02:53	cff36260cc	maccs+scage1+scage2+mole	scaffold	10	0.84697	0.002645	0.53391	0.009407	0.467274	8.86	False	2-layer per-modality projection
+71	2026-05-18T15:11:19	33bf56e2c3	maccs+scage1+scage2+mole	scaffold	10	0.852704	0.002306	0.535014	0.011312	0.523484	7.6	True	SGU learnable gate scale
+72	2026-05-18T15:32:08	0fefa59f31	maccs+scage1+scage2+mole	scaffold	10	0.852213	0.001685	0.533514	0.005619	0.529444	8.52	False	modality dropout p=0.15
+73	2026-05-18T15:41:30	833cbb19f6	maccs+scage1+scage2+mole	scaffold	10	0.851938	0.001673	0.532955	0.008069	0.499086	8.74	False	modality dropout p=0.10
+74	2026-05-18T15:54:25	76ed939ff1	maccs+scage1+scage2+mole	scaffold	10	0.851453	0.00256	0.535741	0.01021	0.487413	8.56	False	diagonal-masked SGU
+75	2026-05-18T16:11:01	91be36aa12	maccs+scage1+scage2+mole	scaffold	10	0.853093	0.002738	0.533402	0.009073	0.475162	8.41	True	CLS token pooling
+76	2026-05-18T16:29:24	f9bc86e4be	maccs+scage1+scage2+mole	scaffold	10	0.850404	0.002327	0.535906	0.011588	0.498696	9.16	False	positional embeddings
+77	2026-05-18T16:39:00	6685e23a84	maccs+scage1+scage2+mole	scaffold	10	0.849211	0.002037	0.529585	0.008761	0.475809	8.99	False	2 CLS tokens mean-pooled
+78	2026-05-18T16:47:39	0d65c850d1	maccs+scage1+scage2+mole	scaffold	10	0.852692	0.002298	0.535665	0.008627	0.466368	8.1	False	AdamW override
+79	2026-05-18T16:57:44	1c924aba91	maccs+scage1+scage2+mole	scaffold	10	0.852411	0.001857	0.535782	0.007977	0.510161	9.53	False	CLS + mean pool 50/50
+80	2026-05-18T17:07:17	a41c2e1528	maccs+scage1+scage2+mole	scaffold	10	0.852174	0.002996	0.537687	0.008868	0.513182	8.97	False	EMA decay=0.93
+81	2026-05-18T17:14:50	5010c0e1ce	maccs+scage1+scage2+mole	scaffold	10	0.852068	0.003167	0.532665	0.00947	0.466858	7.0	False	token dropout p=0.1
+82	2026-05-18T17:22:01	ce3544aa66	maccs+scage1+scage2+mole	scaffold	10	0.852775	0.003583	0.535726	0.010262	0.476894	6.53	False	learnable sigmoid gate CLS/mean
+83	2026-05-18T17:29:58	4170094805	maccs+scage1+scage2+mole	scaffold	10	0.848748	0.003813	0.535544	0.007268	0.46672	7.04	False	pre-backbone LayerNorm
+84	2026-05-18T17:37:49	eeb681920d	maccs+scage1+scage2+mole	scaffold	10	0.853035	0.002762	0.534961	0.00688	0.476149	7.07	False	per-head SGU gate_scale
+85	2026-05-18T17:44:36	712b0f281a	maccs+scage1+scage2+mole	scaffold	10	0.853305	0.002786	0.53572	0.010455	0.482789	6.22	True	EMA decay=0.88
+86	2026-05-18T17:58:23	59069cbdc9	maccs+scage1+scage2+mole	scaffold	10	0.85341	0.002802	0.53659	0.010398	0.476617	6.55	True	EMA decay=0.87
+87	2026-05-18T18:11:29	5de2970bad	maccs+scage1+scage2+mole	scaffold	10	0.853506	0.002825	0.537268	0.0092	0.486521	6.45	True	EMA decay=0.86
+88	2026-05-18T18:24:01	5e9e38cda9	maccs+scage1+scage2+mole	scaffold	10	0.853535	0.002882	0.538455	0.011254	0.481264	6.01	True	EMA decay=0.85
+89	2026-05-18T18:36:44	bb7702a3e6	maccs+scage1+scage2+mole	scaffold	10	0.853577	0.002996	0.540141	0.010917	0.483637	5.99	True	EMA decay=0.84
+90	2026-05-18T18:49:11	8cde8b3c63	maccs+scage1+scage2+mole	scaffold	10	0.853648	0.003042	0.537157	0.01079	0.463625	5.6	True	EMA decay=0.83
+91	2026-05-18T19:03:24	436ee4230a	maccs+scage1+scage2+mole	scaffold	10	0.853616	0.003118	0.537915	0.012933	0.468066	5.62	False	EMA decay=0.82
+92	2026-05-18T19:10:45	68828d190a	maccs+scage1+scage2+mole	scaffold	10	0.853648	0.003042	0.537157	0.01079	0.463625	6.89	False	patience=20
+93	2026-05-18T19:17:32	2e292cd496	maccs+scage1+scage2+mole	scaffold	10	0.852885	0.002985	0.531623	0.010909	0.481251	6.16	False	NAdam override
+94	2026-05-18T19:23:37	ce6d9ac97c	maccs+scage1+scage2+mole	scaffold	10	0.851995	0.003211	0.537694	0.00904	0.462549	5.61	False	lr=1.3e-4
+95	2026-05-18T19:30:27	4fafea1c6c	maccs+scage1+scage2+mole	scaffold	10	0.852505	0.002808	0.536816	0.013818	0.506823	6.44	False	lr=8e-5
+96	2026-05-18T19:36:55	d4b4bd9921	maccs+scage1+scage2+mole	scaffold	10	0.85293	0.003115	0.539841	0.008529	0.49212	5.94	False	head dropout=0.25
+97	2026-05-18T19:42:56	2dff7e9d33	maccs+scage1+scage2+mole	scaffold	10	0.852735	0.00335	0.538358	0.010466	0.466863	5.61	False	head dropout=0.15
+98	2026-05-18T19:49:07	43fec143c2	maccs+scage1+scage2+mole	scaffold	10	0.850912	0.002597	0.535965	0.00962	0.453896	5.68	False	cls_token init zeros
+99	2026-05-18T19:55:33	e59176a661	maccs+scage1+scage2+mole	scaffold	10	0.851976	0.003759	0.536763	0.012191	0.472872	5.79	False	SGU n_heads=4
+100	2026-05-18T20:01:32	238b3b5a28	maccs+scage1+scage2+mole	scaffold	10	0.850929	0.003359	0.534019	0.011291	0.437971	5.54	False	SGU n_heads=1
+101	2026-05-19T19:04:01	7c724130d6	maccs+scage1+scage2+mole	scaffold	10	0.853696	0.002982	0.540682	0.009041	0.475011	4.74	True	EMA init from epoch-0 trained weights
+102	2026-05-19T19:15:32	94969d0b04	maccs+scage1+scage2+mole	scaffold	10	0.853207	0.002485	0.537092	0.008884	0.504173	5.25	False	dual readout: CLS + attn-pool (k=2) over non-CLS tokens
+103	2026-05-19T19:20:51	34d18d071d	maccs+scage1+scage2+mole	scaffold	10	0.85364	0.002881	0.539171	0.010258	0.485861	4.77	False	EMA decay=0.85 retest with init-fix
+104	2026-05-19T19:26:42	a314453fc4	maccs+scage1+scage2+mole	scaffold	10	0.853775	0.00305	0.539192	0.010505	0.481073	4.75	True	EMA decay=0.82 retest with init-fix
+105	2026-05-19T19:36:37	9e29147783	maccs+scage1+scage2+mole	scaffold	10	0.853767	0.003109	0.538748	0.011333	0.483456	4.7	False	EMA decay=0.81
+106	2026-05-19T19:42:39	20543fb232	maccs+scage1+scage2+mole	scaffold	10	0.852348	0.003805	0.538918	0.007784	0.48776	5.0	False	Mish activation
+107	2026-05-19T19:48:21	66f2aae320	maccs+scage1+scage2+mole	scaffold	10	0.851844	0.003617	0.535127	0.010573	0.48936	4.88	False	LayerScale per gMLPBlock (init=0.5)
+108	2026-05-19T19:57:52	c069cd2f6b	maccs+scage1+scage2+mole	scaffold	10	0.85203	0.003997	0.53374	0.010297	0.550002	7.46	False	EMA warmup=3 epochs (skip first 3 epochs)
+109	2026-05-19T20:10:30	4456b4b0b4	maccs+scage1+scage2+mole	scaffold	10	0.849689	0.005379	0.53244	0.010699	0.534131	10.5	False	SGU mixing-path DropPath p=0.05 (per-batch)
+110	2026-05-19T20:20:26	7ea1ab3665	maccs+scage1+scage2+mole	scaffold	10	0.84936	0.003341	0.532908	0.010812	0.524629	8.83	False	SGU u-half LayerNorm
+111	2026-05-19T20:29:47	0d30260cd0	maccs+scage1+scage2+mole	scaffold	10	0.850697	0.004213	0.527407	0.009929	0.43722	8.65	False	MixUp alpha=0.2
+112	2026-05-19T20:39:48	deea8d9322	maccs+scage1+scage2+mole	scaffold	10	0.852066	0.004037	0.535277	0.011351	0.552013	8.5	False	EMA decay=0.825
+113	2026-05-19T20:51:21	451dba01a7	maccs+scage1+scage2+mole	scaffold	10	0.853718	0.003082	0.538735	0.012078	0.4808	7.42	False	EMA decay schedule 0.5->0.82 over 3 epochs
+114	2026-05-19T21:00:58	ac9b5a95b9	maccs+scage1+scage2+mole	scaffold	10	0.85158	0.003558	0.541098	0.008505	0.393047	8.57	False	Focal loss gamma=1.5 for training
+115	2026-05-19T21:11:57	9d6e9dacfe	maccs+scage1+scage2+mole	scaffold	10	0.850202	0.002796	0.530518	0.011038	0.591276	9.87	False	Lookahead(k=5, alpha=0.5) over Adam
+116	2026-05-19T21:21:42	af01f9fa0c	maccs+scage1+scage2+mole	scaffold	10	0.853663	0.00293	0.537537	0.010672	0.47791	8.41	False	AdamW override with EMA-fix stack
+117	2026-05-19T21:31:00	91dc00eb8d	maccs+scage1+scage2+mole	scaffold	10	0.853484	0.003519	0.538634	0.008939	0.492603	8.32	False	head bias init = log(2.27) class prior
+118	2026-05-19T21:59:48	0949255ddc	maccs+scage1+scage2+mole	scaffold	10	0.851439	0.003266	0.533714	0.013499	0.450996	27.55	False	SAM rho=0.05
+119	2026-05-19T22:09:41	7c1983b2a5	maccs+scage1+scage2+mole	scaffold	10	0.851441	0.002865	0.536852	0.011849	0.483625	8.48	False	learnable readout proj from concat(CLS, mean_other)
+120	2026-05-19T22:18:50	2faedd9570	maccs+scage1+scage2+mole	scaffold	10	0.853248	0.003438	0.541511	0.011742	0.471452	8.07	False	gated skip-add mean_other to CLS (init g=0.047)
+121	2026-05-19T22:26:50	c361b2affd	maccs+scage1+scage2+mole	scaffold	10	0.851009	0.002169	0.533083	0.009306	0.494434	7.22	False	backbone depth=3 override
+122	2026-05-19T22:35:14	01bb713db5	maccs+scage1+scage2+mole	scaffold	10	0.853634	0.00321	0.538227	0.009798	0.479201	7.78	False	tanh-bounded FiLM gamma
+123	2026-05-19T22:45:08	90ae8204dc	maccs+scage1+scage2+mole	scaffold	10	0.848771	0.004412	0.518987	0.011396	0.632679	9.04	False	reset EMA from current weights on improvement
+124	2026-05-19T22:54:15	4c5e587bd7	maccs+scage1+scage2+mole	scaffold	10	0.853775	0.00305	0.539192	0.010505	0.481073	7.91	False	ReduceLROnPlateau val_auc factor=0.5 patience=3
+125	2026-05-19T23:02:35	5bdb6ff83f	maccs+scage1+scage2+mole	scaffold	10	0.851318	0.003036	0.534218	0.00755	0.491476	7.47	False	SGU bias init=0.5
+126	2026-05-19T23:17:57	411e68544d	maccs+scage1+scage2+mole	scaffold	10	0.851508	0.002232	0.539357	0.012448	0.46622	8.12	False	raw input skip to logit (zero-init)
+127	2026-05-19T23:35:56	278f05ebae	maccs+scage1+scage2+mole	scaffold	10	0.853438	0.00329	0.539147	0.006916	0.533705	16.82	False	dual EMA fast 0.82 + slow 0.95 averaged
+128	2026-05-20T01:38:40	491e95f30a	maccs+scage1+scage2+mole	scaffold	10	0.852958	0.003255	0.534926	0.007873	0.5028	8.45	False	multi-sample dropout K=5 at head
+129	2026-05-20T01:51:18	6ca635b4c3	maccs+scage1+scage2+mole	scaffold	10	0.85303	0.002525	0.540986	0.008336	0.493729	11.97	False	d_ffn=2048 override
+130	2026-05-20T02:00:27	9d6e51d42c	maccs+scage1+scage2+mole	scaffold	10	0.852777	0.003581	0.5369	0.00649	0.518744	8.32	False	dropout on backbone output (all tokens) before CLS select
+131	2026-05-20T02:08:38	6623366c07	maccs+scage1+scage2+mole	scaffold	10	0.852683	0.002706	0.534818	0.006253	0.45749	7.4	False	LN on FiLM fp/emb mean inputs
+132	2026-05-20T02:19:39	27ef034bd9	maccs+scage1+scage2+mole	scaffold	10	0.843707	0.003716	0.528012	0.010263	0.489537	10.47	False	Transformer backbone (nhead=8, pre-LN, drop 0.1)
+133	2026-05-20T02:28:57	a9c551e0e3	maccs+scage1+scage2+mole	scaffold	10	0.853824	0.002959	0.537246	0.010006	0.4905	8.67	True	GELU tanh-approx
+134	2026-05-20T02:46:49	ca120868f9	maccs+scage1+scage2+mole	scaffold	10	0.851878	0.004075	0.5359	0.0081	0.518405	9.07	False	SiLU activation
+135	2026-05-20T02:56:02	311c6f424a	maccs+scage1+scage2+mole	scaffold	10	0.853778	0.002949	0.537816	0.010482	0.484449	8.68	False	EMA=0.825 + GELU-tanh
+136	2026-05-20T03:04:26	4f5058eddb	maccs+scage1+scage2+mole	scaffold	10	0.853825	0.002983	0.53703	0.010522	0.493592	8.02	True	EMA=0.815 + GELU-tanh
+137	2026-05-20T03:22:04	fe1f3ebe53	maccs+scage1+scage2+mole	scaffold	10	0.853814	0.003008	0.538128	0.011126	0.496638	8.33	False	EMA=0.81 + GELU-tanh
+138	2026-05-20T03:30:57	db853bf78f	maccs+scage1+scage2+mole	scaffold	10	0.853343	0.003527	0.53896	0.010555	0.496127	8.43	False	grad-clip 1.2 + iter136 stack
+139	2026-05-20T03:39:59	ce3e7d3e44	maccs+scage1+scage2+mole	scaffold	10	0.854005	0.003137	0.538896	0.006775	0.498145	8.53	True	pre-head LN affine=False
+140	2026-05-20T03:57:36	92ea6aaa9b	maccs+scage1+scage2+mole	scaffold	10	0.853905	0.003284	0.538303	0.010114	0.50581	8.78	False	gMLPBlock.norm affine=False
+141	2026-05-20T04:06:12	0f7b343e75	maccs+scage1+scage2+mole	scaffold	10	0.854023	0.003181	0.54033	0.007632	0.488919	8.2	True	SGU.norm affine=False
+142	2026-05-20T04:24:13	e15525c686	maccs+scage1+scage2+mole	scaffold	10	0.853843	0.003272	0.538281	0.010657	0.491598	8.82	False	gMLPBlock.norm affine=False (retest with iter141 stack)
+143	2026-05-20T04:32:45	f9b10112e1	maccs+scage1+scage2+mole	scaffold	10	0.854	0.003172	0.541678	0.007651	0.485911	8.14	False	EMA=0.82 with iter141 stack
+144	2026-05-20T04:41:15	14ea904755	maccs+scage1+scage2+mole	scaffold	10	0.852602	0.00257	0.535058	0.004376	0.458149	7.98	False	LN on FiLM mean inputs (affine=False)
+145	2026-05-20T04:50:09	7f0f93e4c4	maccs+scage1+scage2+mole	scaffold	10	0.853832	0.003264	0.535735	0.007339	0.521677	8.3	False	head bias = log(2.27) + iter141 stack
+146	2026-05-20T04:58:42	b3b6b9f213	maccs+scage1+scage2+mole	scaffold	10	0.851837	0.002048	0.537617	0.008142	0.508677	7.98	False	per-modality emb before FiLM
+147	2026-05-20T05:07:40	98051ddc53	maccs+scage1+scage2+mole	scaffold	10	0.853666	0.003755	0.5355	0.009063	0.481377	8.45	False	cls_token init std=0.05
+148	2026-05-20T05:16:10	86c7d86b5a	maccs+scage1+scage2+mole	scaffold	10	0.853473	0.003179	0.542338	0.009716	0.503312	8.14	False	cls_token init std=0.01
+149	2026-05-20T05:25:16	6b93627b04	maccs+scage1+scage2+mole	scaffold	10	0.853195	0.002888	0.535583	0.012172	0.490576	8.5	False	lr=1.1e-4
+150	2026-05-20T05:33:56	2dacc2afd9	maccs+scage1+scage2+mole	scaffold	10	0.854086	0.002831	0.537097	0.008233	0.489963	8.18	True	wd=5e-6
+151	2026-05-20T05:50:59	7e4ff07211	maccs+scage1+scage2+mole	scaffold	10	0.854205	0.002956	0.538241	0.008428	0.492925	8.73	True	wd=1e-6
+152	2026-05-20T06:07:47	0bb65e3ceb	maccs+scage1+scage2+mole	scaffold	10	0.854105	0.002836	0.538975	0.008132	0.49867	8.24	False	wd=0
+153	2026-05-20T06:15:59	5a68d6e27f	maccs+scage1+scage2+mole	scaffold	10	0.854041	0.002896	0.538836	0.00877	0.487041	7.83	False	wd=2e-6
+154	2026-05-20T06:24:19	5cfa4de433	maccs+scage1+scage2+mole	scaffold	10	0.854191	0.002979	0.538058	0.008813	0.488095	7.92	False	EMA=0.83 + iter151 stack
+155	2026-05-20T06:33:32	96c899a94c	maccs+scage1+scage2+mole	scaffold	10	0.852769	0.003434	0.539715	0.008879	0.490587	8.76	False	head dropout=0.18
+156	2026-05-20T06:43:35	2f22080fc1	maccs+scage1+scage2+mole	scaffold	10	0.854205	0.002956	0.538241	0.008428	0.492925	9.59	True	patience=20
+157	2026-05-20T07:04:01	022e752bd5	maccs+scage1+scage2+mole	scaffold	10	0.854192	0.002799	0.537046	0.00916	0.496677	10.11	False	wd=5e-7
+158	2026-05-20T07:14:17	429ec80cfa	maccs+scage1+scage2+mole	scaffold	10	0.853362	0.002943	0.539373	0.007867	0.490299	9.74	False	grad-clip=0.8
+159	2026-05-20T07:24:38	d6e143967e	maccs+scage1+scage2+mole	scaffold	10	0.852136	0.002778	0.535573	0.007006	0.502246	9.86	False	SGU gate_scale init=-0.5
+160	2026-05-20T07:35:00	8a01c45803	maccs+scage1+scage2+mole	scaffold	10	0.854213	0.002979	0.538719	0.008957	0.489806	9.59	True	EMA=0.82 + iter156 stack
+161	2026-05-20T07:55:30	2e428cda7a	maccs+scage1+scage2+mole	scaffold	10	0.854191	0.002979	0.538058	0.008813	0.488095	9.74	False	EMA=0.83 + iter160 stack
+162	2026-05-20T08:05:37	73fd5a04f8	maccs+scage1+scage2+mole	scaffold	10	0.854176	0.002984	0.537541	0.009181	0.496002	9.71	False	EMA=0.81 + iter160 stack
+163	2026-05-20T08:16:27	030c73ff1e	maccs+scage1+scage2+mole	scaffold	10	0.853054	0.003107	0.538123	0.006411	0.494806	10.21	False	Adam betas=(0.9, 0.99)
+164	2026-05-20T08:26:36	608a599084	maccs+scage1+scage2+mole	scaffold	10	0.853106	0.003123	0.53699	0.009605	0.475984	9.49	False	lr=9e-5 + iter160 stack
+165	2026-05-20T08:37:28	a85df1d122	maccs+scage1+scage2+mole	scaffold	10	0.853604	0.003565	0.542784	0.009518	0.499597	9.78	False	pre-head RMSNorm affine=False
+166	2026-05-20T08:47:59	7c152cae9a	maccs+scage1+scage2+mole	scaffold	10	0.854111	0.002846	0.539135	0.007958	0.495475	9.83	False	AdamW + wd=1e-6
+167	2026-05-20T08:58:15	a6d6f5a2f3	maccs+scage1+scage2+mole	scaffold	10	0.8517	0.003522	0.535542	0.005824	0.513469	9.28	False	grad accum=2 (eff bs=256)
+168	2026-05-20T09:09:21	a19198b7a2	maccs+scage1+scage2+mole	scaffold	10	0.853177	0.002729	0.536315	0.006997	0.496266	10.37	False	head dropout=0.25
+169	2026-05-20T09:19:59	733a82ea2b	maccs+scage1+scage2+mole	scaffold	10	0.851936	0.003357	0.533491	0.012006	0.505453	9.9	False	SGU v_out dropout p=0.05
+170	2026-05-20T09:32:15	be62899097	maccs+scage1+scage2+mole	scaffold	10	0.854213	0.002979	0.538719	0.008957	0.489806	11.5	True	patience=25
+171	2026-05-20T09:54:23	7893aeaa9e	maccs+scage1+scage2+mole	scaffold	10	0.85353	0.00338	0.541741	0.007333	0.471273	9.88	False	learnable pos_emb zero-init
+172	2026-05-20T12:00:05	27f873b80d	maccs+scage1+scage2+mole	scaffold	10	0.849964	0.003963	0.532917	0.008005	0.464036	11.13	False	MACCS bit-flip noise p=0.02
+173	2026-05-20T12:13:03	f99779fc8a	maccs+scage1+scage2+mole	scaffold	10	0.852954	0.002358	0.537711	0.008548	0.515408	12.22	False	Adam betas=(0.95, 0.999)
+174	2026-05-20T12:26:10	ad3a4621e2	maccs+scage1+scage2+mole	scaffold	10	0.8535	0.003368	0.536286	0.011673	0.539008	12.08	False	stop-grad on FiLM gating signal
+175	2026-05-20T12:37:15	ada981baf9	maccs+scage1+scage2+mole	scaffold	10	0.850227	0.003355	0.535595	0.01066	0.519606	9.26	False	remove CrossModalFiLM (Identity)
+176	2026-05-20T12:48:34	3e37a77c61	maccs+scage1+scage2+mole	scaffold	10	0.849545	0.00283	0.528887	0.010239	0.494787	10.4	False	Xavier init per-modality proj
+177	2026-05-20T13:01:28	2f994180a2	maccs+scage1+scage2+mole	scaffold	10	0.85409	0.002975	0.537936	0.007276	0.489806	11.35	False	SWA top-3 ema_state avg as final
+178	2026-05-20T13:13:13	58aa279d49	maccs+scage1+scage2+mole	scaffold	10	0.854175	0.003013	0.539424	0.006804	0.489806	11.06	False	SWA top-2 ema_state avg
+179	2026-05-20T13:27:02	7e0f476aff	maccs+scage1+scage2+mole	scaffold	10	0.852328	0.004052	0.541072	0.008687	0.487914	11.83	False	FiLM gate dropout p=0.1
+180	2026-05-20T13:39:52	2ce6307c13	maccs+scage1+scage2+mole	scaffold	10	0.846536	0.002987	0.532985	0.007122	0.492098	11.91	False	LayerScale init=1e-4 per-channel
+181	2026-05-20T13:52:33	8f1d22cf77	maccs+scage1+scage2+mole	scaffold	10	0.854147	0.002846	0.536842	0.010618	0.508679	12.08	False	Adam amsgrad=True
+182	2026-05-20T14:04:59	39f493551d	maccs+scage1+scage2+mole	scaffold	10	0.853608	0.003047	0.541824	0.008689	0.492128	11.25	False	head lr=2x base
+183	2026-05-20T14:19:00	4995b39d92	maccs+scage1+scage2+mole	scaffold	10	0.854157	0.002954	0.539201	0.007885	0.508679	12.77	False	amsgrad + SWA top-2
+184	2026-05-20T14:31:01	426ef3361a	maccs+scage1+scage2+mole	scaffold	10	0.85422	0.002979	0.538093	0.009251	0.490285	11.13	True	layer-wise EMA (head=0.6, rest=0.82)
+185	2026-05-20T14:55:14	d9da627b99	maccs+scage1+scage2+mole	scaffold	10	0.854223	0.002977	0.53843	0.009322	0.490347	12.0	True	head EMA decay=0.5 + iter184 stack
+186	2026-05-20T15:14:40	0c1fcede32	maccs+scage1+scage2+mole	scaffold	10	0.854224	0.002974	0.538481	0.009275	0.490374	8.01	True	head EMA decay=0.4 + iter185 stack
+187	2026-05-20T15:31:42	2b3be1f8a8	maccs+scage1+scage2+mole	scaffold	10	0.854224	0.002973	0.538708	0.009389	0.490392	8.28	True	head EMA decay=0.2 + iter186 stack
+188	2026-05-20T15:48:36	9702966cae	maccs+scage1+scage2+mole	scaffold	10	0.85422	0.002974	0.538497	0.009523	0.490409	7.97	False	head EMA decay=0.0 (off) + iter187 stack
+189	2026-05-20T15:56:57	953825f4ab	maccs+scage1+scage2+mole	scaffold	10	0.854218	0.002972	0.538615	0.009421	0.490398	7.89	False	head EMA decay=0.1 + iter187 stack
+190	2026-05-20T16:05:51	daa9a67111	maccs+scage1+scage2+mole	scaffold	10	0.854001	0.003091	0.540095	0.008666	0.491743	8.44	False	proj EMA=0.7 + head=0.2 + iter187 stack
+191	2026-05-20T16:14:32	9e089118dc	maccs+scage1+scage2+mole	scaffold	10	0.854224	0.002967	0.537701	0.010211	0.490607	8.23	True	cls_token EMA=0.5 + head=0.2 + iter187 stack
+192	2026-05-20T16:31:16	b59914e572	maccs+scage1+scage2+mole	scaffold	10	0.854227	0.002964	0.537702	0.010001	0.49063	8.08	True	cls_token EMA=0.3 + iter191 stack
+193	2026-05-20T16:48:42	6468cbb1f5	maccs+scage1+scage2+mole	scaffold	10	0.854225	0.002965	0.537819	0.010286	0.490636	8.31	False	cls_token EMA=0.1 + iter192 stack
+194	2026-05-20T16:57:10	bd98fdfe0c	maccs+scage1+scage2+mole	scaffold	10	0.854224	0.00297	0.537931	0.010307	0.490617	7.91	False	SGU gate_scale EMA=0.5 + iter192 stack
+195	2026-05-20T17:05:42	0ced1c82c8	maccs+scage1+scage2+mole	scaffold	10	0.854224	0.002965	0.537651	0.010042	0.490634	8.07	False	cls_token EMA=0.2 + iter192 stack
+196	2026-05-20T17:17:37	1634a3265d	maccs+scage1+scage2+mole	scaffold	10	0.854223	0.002965	0.537934	0.010126	0.490656	11.33	False	block norm EMA=0.6 + iter192 stack
+197	2026-05-20T17:31:19	2c4803d72c	maccs+scage1+scage2+mole	scaffold	10	0.8543	0.003107	0.53874	0.006451	0.494105	13.17	True	FiLM EMA=0.5 + iter192 stack
+198	2026-05-20T17:58:16	cb81b107d4	maccs+scage1+scage2+mole	scaffold	10	0.85427	0.003155	0.537554	0.006765	0.494289	12.19	False	FiLM EMA=0.3 + iter197 stack
+199	2026-05-20T18:12:49	bcc82c1010	maccs+scage1+scage2+mole	scaffold	10	0.854288	0.003122	0.537593	0.006761	0.492354	14.05	False	FiLM EMA=0.4 + iter197 stack
+200	2026-05-20T18:24:56	5f0a12d33b	maccs+scage1+scage2+mole	scaffold	10	0.854293	0.003064	0.539142	0.006918	0.490269	11.63	False	FiLM EMA=0.6 + iter197 stack
