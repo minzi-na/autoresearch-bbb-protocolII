@@ -1,0 +1,39 @@
+{
+  "combo": "maccs+avalon+scage2+mole",
+  "combo_tuple": [
+    "maccs",
+    "avalon",
+    "scage2",
+    "mole"
+  ],
+  "fp_dims": {
+    "maccs": 166,
+    "avalon": 512,
+    "scage2": 512,
+    "mole": 768
+  },
+  "pool_size": 9786,
+  "seeds": [
+    42,
+    100,
+    200,
+    300,
+    400,
+    500,
+    600,
+    700,
+    800,
+    900
+  ],
+  "eval_subsets": [
+    "nn05",
+    "total"
+  ],
+  "tabpfn_config": {
+    "version": "2.5",
+    "n_estimators": 8,
+    "ignore_pretraining_limits": false,
+    "device": "cuda",
+    "model_path": "/home/minji/.cache/tabpfn/tabpfn-v2.5-classifier-v2.5_default.ckpt"
+  }
+}

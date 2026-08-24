@@ -1,0 +1,199 @@
+--- /home/minji/combos-v2-combo1/evaluate_combo.py	2026-05-17 15:16:35.066361878 +0900
++++ /home/minji/autoresearch_combos_v2/results/comparison/evaluate_combo_v3.py	2026-05-19 22:26:40.865892845 +0900
+@@ -1,21 +1,37 @@
+ #!/usr/bin/env python3
+ """
+-evaluate_combo.py — iteration runner (FROZEN, agent must not edit).
++evaluate_combo.py (v3 — Pareto composite gate) — iteration runner (FROZEN, agent must not edit).
+ 
+-Runs 10 seeds × scaffold split for one combo and appends one row to
+-results/<combo>/results.tsv. keep/discard decision = mean(val_roc_auc).
++Runs 10 seeds x scaffold split for one combo and appends one row to
++results/<combo>/results.tsv.
++
++keep/discard decision (v3, changed from v2):
++    Reference = latest keep=True row's (val_AUC, val_MCC).
++    Let eps_auc, eps_mcc be tolerance bands (defaults 1e-3 and 1e-3).
++    keep iff one of:
++      (a) val_AUC > ref_AUC + eps_auc                          (clear AUC improve)
++      (b) |val_AUC - ref_AUC| <= eps_auc                       (AUC within noise)
++          AND val_MCC > ref_MCC + eps_mcc                      AND MCC strictly improves
++    Reject if val_AUC < ref_AUC - eps_auc (AUC regression beyond noise).
++    Reject if AUC within noise AND MCC not strictly improved (no-progress tie).
++
++This is an asymmetric gate: AUC is primary (and AUC strict improvement is kept
++regardless of MCC, to allow normal architectural tradeoffs), but AUC ties no
++longer auto-keep — they must be broken by a strict MCC improvement. Compared to
++v2 (which kept all AUC ties), this:
++  - rejects val_AUC tie iters whose val_MCC drifts down (combo3 late-iter
++    pattern at iter54..90 in autoresearch_combos_v2)
++  - rejects val_AUC ties that don't advance val_MCC either (no-progress noise)
++  - allows AUC-strict-improvement iters even if MCC drops (combo1 iter6/12 style
++    architectural exploration)
++  - keeps holdout sets clean: only val is used for keep/discard
+ 
+ Usage:
+-    conda run -n rapids-25.02 python evaluate_combo.py \
+-        --combo maccs+scage1+mole \
+-        --iter-id 1 \
+-        --note "baseline reproduction"
+-
+-Optional:
+-    --seeds 42,100,200,...   (default: 10 seeds, same as baseline)
+-    --split-mode scaffold    (or random_scaffold; default scaffold)
+-    --no-append              (run but don't write to results.tsv)
+-    --commit <sha>           (override git HEAD commit recorded in TSV)
++    conda run -n rapids-25.02 python evaluate_combo.py \\
++        --combo maccs+scage1+mole \\
++        --iter-id 1 \\
++        --note "baseline reproduction" \\
++        [--eps-auc 0.0005] [--eps-mcc 0.0005]
+ """
+ 
+ import os
+@@ -47,12 +63,17 @@
+     "maccs+scage1+scage2+mole",
+ ]
+ 
++# v3 defaults — eps_auc ~ 1 SE of mean AUC across 10 seeds (~0.003/sqrt(10)).
++# eps_mcc set to the same scale; user can override via --eps-auc / --eps-mcc.
++DEFAULT_EPS_AUC = 1e-3
++DEFAULT_EPS_MCC = 1e-3
++
+ TSV_COLUMNS = [
+     "iter", "timestamp", "commit", "combo", "split_mode", "n_seeds",
+     "mean_val_auc", "std_val_auc",
+     "mean_val_mcc", "std_val_mcc",
+     "mean_val_loss",
+-    "wall_time_min", "keep", "note",
++    "wall_time_min", "keep", "keep_reason", "note",
+ ]
+ 
+ 
+@@ -74,14 +95,50 @@
+     return pd.read_csv(path, sep="\t")
+ 
+ 
+-def current_best_val_auc(combo: str) -> float:
++def latest_kept_metrics(combo: str):
++    """Return (ref_auc, ref_mcc, ref_iter) of the most recent keep=True row.
++    If no keep exists yet (first iter), returns (-inf, -inf, None) so the
++    very first iter always keeps."""
+     df = load_results_tsv(combo)
+     if df.empty:
+-        return float("-inf")
++        return float("-inf"), float("-inf"), None
+     keepers = df[df["keep"] == True]  # noqa: E712
+     if keepers.empty:
+-        return float("-inf")
+-    return float(keepers["mean_val_auc"].max())
++        return float("-inf"), float("-inf"), None
++    last = keepers.iloc[-1]
++    return float(last["mean_val_auc"]), float(last["mean_val_mcc"]), int(last["iter"])
++
++
++def keep_decision(mean_auc, mean_mcc, ref_auc, ref_mcc, eps_auc, eps_mcc):
++    """v3 asymmetric composite gate.
++    Returns (keep: bool, reason: str).
++
++    Semantics:
++      - First keep (no reference): always keep.
++      - AUC strict regression (val_AUC < ref - eps_auc): discard.
++      - AUC strict improvement (val_AUC > ref + eps_auc): keep (MCC ignored;
++          allows AUC-MCC architectural tradeoffs).
++      - AUC within +/- eps_auc (noise band): keep iff val_MCC > ref + eps_mcc
++          (MCC strict improvement breaks the tie).
++      - Otherwise: discard (no-progress tie).
++    """
++    if ref_auc == float("-inf"):
++        return True, "first-keep (no reference)"
++
++    d_auc = mean_auc - ref_auc
++    d_mcc = mean_mcc - ref_mcc
++
++    if d_auc < -eps_auc:
++        return False, f"AUC regress (dAUC={d_auc:+.4f}, eps={eps_auc})"
++
++    if d_auc > eps_auc:
++        return True, f"AUC improve (dAUC={d_auc:+.4f}, dMCC={d_mcc:+.4f})"
++
++    # AUC within noise band: require MCC tiebreaker
++    if d_mcc > eps_mcc:
++        return True, f"AUC tied, MCC improve (dAUC={d_auc:+.4f}, dMCC={d_mcc:+.4f})"
++
++    return False, f"tie/no-progress (dAUC={d_auc:+.4f}, dMCC={d_mcc:+.4f})"
+ 
+ 
+ def append_row(combo: str, row: dict):
+@@ -139,6 +196,10 @@
+     p.add_argument("--commit",     type=str, default=None)
+     p.add_argument("--no-append",  action="store_true",
+                    help="Skip writing the result row to TSV.")
++    p.add_argument("--eps-auc",    type=float, default=DEFAULT_EPS_AUC,
++                   help=f"AUC tolerance for Pareto gate (default {DEFAULT_EPS_AUC}).")
++    p.add_argument("--eps-mcc",    type=float, default=DEFAULT_EPS_MCC,
++                   help=f"MCC tolerance for Pareto gate (default {DEFAULT_EPS_MCC}).")
+     args = p.parse_args()
+ 
+     seeds = [int(s) for s in args.seeds.split(",")] if args.seeds else DEFAULT_SEEDS
+@@ -147,6 +208,7 @@
+ 
+     print(f"[Plan] combo={args.combo}  iter={args.iter_id}  commit={commit}")
+     print(f"[Plan] seeds={seeds}  split_mode={args.split_mode}")
++    print(f"[Plan] eps_auc={args.eps_auc}  eps_mcc={args.eps_mcc}")
+     print(f"[Plan] note=\"{args.note}\"")
+ 
+     print("[Data] Loading pool features ...")
+@@ -177,17 +239,23 @@
+     mean_mcc, std_mcc = float(mccs.mean()), float(mccs.std(ddof=0))
+     mean_loss = float(np.nanmean(losses)) if np.isfinite(losses).any() else float("nan")
+ 
+-    best_so_far = current_best_val_auc(args.combo)
+-    keep = bool(mean_auc > best_so_far)
++    ref_auc, ref_mcc, ref_iter = latest_kept_metrics(args.combo)
++    keep, reason = keep_decision(
++        mean_auc, mean_mcc, ref_auc, ref_mcc, args.eps_auc, args.eps_mcc
++    )
+ 
+     print("\n" + "=" * 60)
+     print(f"combo={args.combo}  iter={args.iter_id}  commit={commit}")
+-    print(f"mean_val_auc = {mean_auc:.6f} ± {std_auc:.6f}   "
+-          f"(prev best kept = {best_so_far:.6f})")
+-    print(f"mean_val_mcc = {mean_mcc:.6f} ± {std_mcc:.6f}")
++    print(f"mean_val_auc = {mean_auc:.6f} +/- {std_auc:.6f}")
++    print(f"mean_val_mcc = {mean_mcc:.6f} +/- {std_mcc:.6f}")
+     print(f"mean_val_loss = {mean_loss:.6f}")
++    if ref_iter is not None:
++        print(f"reference    = iter{ref_iter}  ref_auc={ref_auc:.6f}  ref_mcc={ref_mcc:.6f}")
++    else:
++        print("reference    = (none — first keep)")
++    print(f"gate eps     = (auc={args.eps_auc}, mcc={args.eps_mcc})")
+     print(f"wall_time    = {wall_min:.2f} min")
+-    print(f"DECISION     = {'KEEP' if keep else 'DISCARD'}")
++    print(f"DECISION     = {'KEEP' if keep else 'DISCARD'}  [{reason}]")
+     print("=" * 60)
+ 
+     row = {
+@@ -204,6 +272,7 @@
+         "mean_val_loss": round(mean_loss, 6) if np.isfinite(mean_loss) else "",
+         "wall_time_min": round(wall_min, 2),
+         "keep":          keep,
++        "keep_reason":   reason,
+         "note":          args.note,
+     }
+ 
+@@ -218,7 +287,13 @@
+     with open(per_seed_path, "w") as f:
+         json.dump({"iter": args.iter_id, "commit": commit, "combo": args.combo,
+                    "split_mode": args.split_mode, "per_seed": per_seed,
+-                   "summary": row}, f, indent=2)
++                   "summary": row,
++                   "gate": {"policy": "v3-pareto-composite",
++                             "eps_auc": args.eps_auc, "eps_mcc": args.eps_mcc,
++                             "ref_iter": ref_iter,
++                             "ref_auc": (None if ref_auc == float("-inf") else ref_auc),
++                             "ref_mcc": (None if ref_mcc == float("-inf") else ref_mcc),
++                             "reason": reason}}, f, indent=2)
+     print(f"[Output] per-seed JSON: {per_seed_path}")
+ 
+ 

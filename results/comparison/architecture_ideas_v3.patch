@@ -1,0 +1,79 @@
+--- /home/minji/combos-v2-combo1/architecture_ideas.md	2026-05-17 17:03:38.982145409 +0900
++++ /home/minji/autoresearch_combos_v2/results/comparison/architecture_ideas_v3.md	2026-05-19 23:03:08.936863923 +0900
+@@ -7,12 +7,75 @@
+ Adapted from the prior BBB autoresearch playbook. Differences from before:
+ - Pool is **8:2 train/val only**, scaffold split — no internal test bucket.
+ - Generalization track is the 5 holdout subsets (reporting-only via
+-  `final_holdout_eval.py`); keep/discard is val_auc.
++  `final_holdout_eval.py`); keep/discard is the **v3 asymmetric composite
++  gate** (val_AUC primary, val_MCC tiebreaker — see next section).
+ - All 3 combos use the `maccs/avalon/scage1/scage2/mole` family — none
+   contain `rdkit`/`ecfp`/`tt`. Ignore prior rdkit-scaling discussion.
+ 
+ ---
+ 
++## Keep gate (v3) — what to optimize for
++
++**TL;DR.** A new iter is `keep` only if it shows a **clear gain** on val_AUC,
++OR (val_AUC is within noise AND val_MCC strictly improves). The v2 policy of
++"AUC tie also keeps" is gone — it led to late-iter drift where val_MCC
++silently regressed while val_AUC was tied (see
++`results/comparison/pre_post_baseline_comparison_100.md` section 6).
++
++Concretely (`evaluate_combo.py` v3, default eps_auc = eps_mcc = 1e-3):
++
++```
++ref = (val_AUC, val_MCC) of the most recent keep=True row.
++let d_auc = mean_val_auc - ref_AUC ;  d_mcc = mean_val_mcc - ref_MCC
++keep iff:
++    d_auc > +eps_auc                                # (a) clear AUC improvement
++    OR  (|d_auc| <= eps_auc  AND  d_mcc > +eps_mcc) # (b) AUC tied, MCC strict
++discard if:
++    d_auc < -eps_auc                                # AUC regression beyond noise
++    OR  |d_auc| <= eps_auc AND d_mcc <= +eps_mcc    # no-progress tie
++```
++
++**Implications for your proposals.**
++
++1. **Move val_AUC by > 1e-3 or val_MCC by > 1e-3 — otherwise the iter is
++   rejected by the gate.** 10-seed val mean has SE ≈ 0.001 (AUC) and
++   ≈ 0.002–0.005 (MCC). Sub-noise nudges no longer count as progress.
++
++2. **Avoid one-step hyperparam fine sweeps.** Sequences like
++   `EMA decay 0.88 → 0.87 → 0.86 → ... → 0.83`, or
++   `weight_decay 0.01 → 0.005 → 0.003`, or
++   `dropout 0.20 → 0.18 → 0.15` are now anti-patterns: each step
++   typically moves val_AUC by ~1e-4–3e-4 and val_MCC noisily, so all but
++   the lucky tie-break attempts get rejected. If you want to search a
++   scalar hyperparam, take coarser jumps (e.g. EMA `0.99 → 0.9 → 0.8`
++   directly) or treat it as one decision, not five.
++
++3. **Prefer structural / qualitative changes over scalar tuning.** New
++   pooling variant, new SGU mixing scheme, new conditioning layer, new
++   loss formulation, new regularization mechanism — these are likely to
++   produce |Δ val_AUC| > 1e-3 in either direction so the gate has real
++   signal to keep or reject.
++
++4. **MCC matters in the noise band.** If your proposed change is
++   designed to be val_AUC-neutral (e.g. better-calibrated head, focal
++   loss, threshold-aware loss, class-weighted training), make sure
++   val_MCC moves visibly. In the noise band MCC tiebreaker is the only
++   way to keep.
++
++5. **AUC-MCC tradeoffs are still allowed.** If your change pushes val_AUC
++   up clearly (Δ > eps_auc) but pulls val_MCC down, the gate still keeps
++   it — this preserves the early-iter freedom to explore architectures
++   with sharp AUC-MCC tradeoffs (like combo1 iter6/iter12 type moves in
++   the v2 run). MCC is only a tiebreaker, not a veto.
++
++**What this changes about how to read this catalog.** The Priority table
++below stays valid in terms of *which* component to touch, but skip any
++proposal that boils down to a one-step scalar nudge unless you have a
++specific reason to expect > 1e-3 movement. Structural changes are now
++strictly preferred at all priorities.
++
++---
++
+ ## Current architecture
+ 
+ ```
