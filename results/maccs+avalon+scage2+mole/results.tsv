@@ -1,0 +1,201 @@
+iter	timestamp	commit	combo	split_mode	n_seeds	mean_val_auc	std_val_auc	mean_val_mcc	std_val_mcc	mean_val_loss	wall_time_min	keep	note
+1	2026-05-17T17:11:58	d82eae5332	maccs+avalon+scage2+mole	scaffold	10	0.844294	0.004246	0.532993	0.013607	0.584325	2.22	True	baseline reproduction
+2	2026-05-17T17:18:19	b7169ccd73	maccs+avalon+scage2+mole	scaffold	10	0.841657	0.004414	0.514399	0.014448	0.584916	2.32	False	AdamW+clip1+warmup5+cosine
+3	2026-05-17T18:01:07	c6d3d5e72e	maccs+avalon+scage2+mole	scaffold	10	0.843686	0.003097	0.515544	0.020004	0.469764	2.7	False	pos_weight=n_neg/n_pos auto-from-train
+4	2026-05-17T18:04:38	1f47f71efa	maccs+avalon+scage2+mole	scaffold	10	0.841064	0.004635	0.519563	0.021963	0.415345	2.45	False	BCE label smoothing 0.1 train-only
+5	2026-05-17T18:08:32	50096c108d	maccs+avalon+scage2+mole	scaffold	10	0.841895	0.003883	0.509524	0.020021	0.59917	3.09	False	LayerNorm after per-modality projection
+6	2026-05-17T18:12:33	1537b21f64	maccs+avalon+scage2+mole	scaffold	10	0.846964	0.002924	0.512321	0.019877	0.579991	3.18	True	modality dropout p=0.15
+7	2026-05-17T18:19:34	e60ac45f85	maccs+avalon+scage2+mole	scaffold	10	0.846758	0.002687	0.515257	0.022228	0.574437	2.96	False	sigmoid skip-gate mix gated/mean pool
+8	2026-05-17T18:25:13	e3497350a4	maccs+avalon+scage2+mole	scaffold	10	0.844073	0.003683	0.519131	0.01287	0.603598	3.69	False	cross-modal FiLM fp<->embed safe-init
+9	2026-05-17T18:29:22	f3c3d2bc77	maccs+avalon+scage2+mole	scaffold	10	0.846926	0.003187	0.511347	0.018167	0.566967	3.13	False	attention pooling (input-dependent)
+10	2026-05-17T18:33:41	736cf00709	maccs+avalon+scage2+mole	scaffold	10	0.846122	0.00252	0.515456	0.022625	0.577267	3.29	False	SGU learnable residual scale (init=original)
+11	2026-05-17T18:37:14	0c1239dcf2	maccs+avalon+scage2+mole	scaffold	10	0.837673	0.004224	0.496605	0.021455	0.556291	2.74	False	2-layer per-modality projection
+12	2026-05-17T18:41:48	bf90e40adf	maccs+avalon+scage2+mole	scaffold	10	0.847701	0.004372	0.511293	0.011206	0.597106	3.46	True	multi-head SGU n_heads=2
+13	2026-05-17T18:51:57	f819ff7c5d	maccs+avalon+scage2+mole	scaffold	10	0.845737	0.004951	0.524875	0.010202	0.632903	4.86	False	cross-modal AdaLN (FiLM + LN, safe-mod init)
+14	2026-05-17T18:55:42	f5afb80f83	maccs+avalon+scage2+mole	scaffold	10	0.839175	0.004083	0.506912	0.020002	0.561496	2.31	False	CLS token pooling (seq_len+1)
+15	2026-05-17T18:59:51	f0251cfac6	maccs+avalon+scage2+mole	scaffold	10	0.845689	0.003106	0.514401	0.023255	0.615192	3.24	False	stochastic depth on gMLPBlocks (p=0.10)
+16	2026-05-17T19:07:21	a62d2fd5a8	maccs+avalon+scage2+mole	scaffold	10	0.843159	0.005022	0.518575	0.014773	0.532045	5.52	False	diagonal-masked attention SGU
+17	2026-05-17T19:14:57	5a6d2091b0	maccs+avalon+scage2+mole	scaffold	10	0.849704	0.003137	0.535396	0.009329	0.567684	5.77	True	EMA weights (decay=0.999) for val + ES
+18	2026-05-17T19:27:32	70d4a37b33	maccs+avalon+scage2+mole	scaffold	10	0.848661	0.001314	0.53244	0.011186	0.551528	5.48	False	multi-head SGU n_heads=4 (variant of iter12)
+19	2026-05-17T19:34:31	a3e5ee4c53	maccs+avalon+scage2+mole	scaffold	10	0.84961	0.003038	0.534078	0.006878	0.565666	6.38	False	EMA decay 0.9995
+20	2026-05-18T01:15:33	f064aeee64	maccs+avalon+scage2+mole	scaffold	10	0.849725	0.002995	0.534972	0.009948	0.5306	6.5	True	per-modality learnable scale (init=1.0)
+21	2026-05-18T01:31:51	3cb8b7e4f5	maccs+avalon+scage2+mole	scaffold	10	0.84971	0.00323	0.539647	0.008911	0.540943	7.43	False	gradient clipping max_norm=1.0
+22	2026-05-18T01:40:57	748e787eb8	maccs+avalon+scage2+mole	scaffold	10	0.850344	0.004202	0.531186	0.009211	0.579043	7.9	True	DropPath in SGU v-path p=0.10
+23	2026-05-18T01:57:50	17eb50fd0a	maccs+avalon+scage2+mole	scaffold	10	0.849638	0.003313	0.53135	0.011417	0.550637	7.98	False	DropPath SGU v-path p=0.15 (sweep)
+24	2026-05-18T02:06:30	e9d589cf46	maccs+avalon+scage2+mole	scaffold	10	0.850282	0.003934	0.534617	0.011077	0.586822	8.11	False	DropPath SGU v-path p=0.05 (sweep down)
+25	2026-05-18T02:14:27	cb5cdcf4e5	maccs+avalon+scage2+mole	scaffold	10	0.849034	0.002903	0.532356	0.009624	0.564336	7.46	False	modality dropout 0.15 -> 0.10
+26	2026-05-18T02:25:43	a2054efa4c	maccs+avalon+scage2+mole	scaffold	10	0.848657	0.003137	0.531644	0.011843	0.587778	9.39	False	multi-query attention pool k=2 (replaces gated pool)
+27	2026-05-18T02:35:42	2c034d2447	maccs+avalon+scage2+mole	scaffold	10	0.850403	0.004332	0.530759	0.007392	0.608808	8.34	True	EMA warmup 3 epochs (smoothing starts ep3)
+28	2026-05-18T02:52:02	61372c7626	maccs+avalon+scage2+mole	scaffold	10	0.850153	0.004218	0.528555	0.006969	0.625853	7.75	False	EMA warmup 3 -> 5 epochs (sweep up)
+29	2026-05-18T03:00:02	135fc69229	maccs+avalon+scage2+mole	scaffold	10	0.85077	0.003986	0.532757	0.009635	0.59145	7.57	True	EMA warmup 3 -> 2 epochs (sweep down)
+30	2026-05-18T03:15:53	b52d97ee17	maccs+avalon+scage2+mole	scaffold	10	0.851378	0.003635	0.539602	0.010517	0.547717	7.58	True	EMA warmup 2 -> 1 epoch (sweep further down)
+31	2026-05-18T03:29:51	72b981ce32	maccs+avalon+scage2+mole	scaffold	10	0.849669	0.003638	0.530955	0.010714	0.540951	5.14	False	EMA decay 0.999 -> 0.997 (faster tracking)
+32	2026-05-18T03:39:54	6ba850fb3d	maccs+avalon+scage2+mole	scaffold	10	0.851812	0.003711	0.53432	0.005359	0.577465	9.2	True	EMA decay 0.999 -> 0.9995 (slower) on warmup=1 stack
+33	2026-05-18T03:57:38	95244481f8	maccs+avalon+scage2+mole	scaffold	10	0.850376	0.003269	0.537627	0.007674	0.488141	7.36	False	EMA decay 0.9995 -> 0.9997 (slower)
+34	2026-05-18T04:08:08	0d9471db67	maccs+avalon+scage2+mole	scaffold	10	0.851699	0.003345	0.537354	0.008089	0.554132	9.54	False	per-block per-channel LayerScale (init=1.0)
+35	2026-05-18T04:18:31	f30bea0d89	maccs+avalon+scage2+mole	scaffold	10	0.850699	0.003146	0.53513	0.012101	0.54077	9.8	False	modality dropout 0.15 -> 0.20 (sweep up)
+36	2026-05-18T04:29:12	9dcc0779fe	maccs+avalon+scage2+mole	scaffold	10	0.849916	0.002625	0.534778	0.007411	0.56241	9.67	False	input feature dropout p=0.10 on raw flat input
+37	2026-05-18T04:39:52	fa1fa48335	maccs+avalon+scage2+mole	scaffold	10	0.850962	0.004122	0.536177	0.007941	0.55198	9.76	False	head dropout 0.20 -> 0.30
+38	2026-05-18T04:50:25	17578e2325	maccs+avalon+scage2+mole	scaffold	10	0.852038	0.003452	0.539887	0.005314	0.553785	9.34	True	Adam(wd=1e-5) -> AdamW(wd=0.01) inside train_model
+39	2026-05-18T05:09:58	96ebba7da9	maccs+avalon+scage2+mole	scaffold	10	0.851899	0.003288	0.536908	0.006826	0.547693	9.33	False	AdamW wd 0.01 -> 0.03 (sweep up)
+40	2026-05-18T05:20:01	2ce23f116f	maccs+avalon+scage2+mole	scaffold	10	0.851831	0.003489	0.538556	0.008092	0.564071	9.57	False	AdamW wd 0.01 -> 0.005 (sweep down)
+41	2026-05-18T05:30:57	ded4dacd72	maccs+avalon+scage2+mole	scaffold	10	0.850407	0.002989	0.536051	0.010849	0.576321	9.7	False	linear lr warmup 3 epochs on AdamW stack
+42	2026-05-18T05:41:36	fd817f4e73	maccs+avalon+scage2+mole	scaffold	10	0.85126	0.003589	0.538814	0.009433	0.545693	9.33	False	SGU pre-mix LayerNorm -> RMSNorm
+43	2026-05-18T05:52:10	5b47fa47ec	maccs+avalon+scage2+mole	scaffold	10	0.851931	0.003347	0.539179	0.010271	0.555063	9.75	False	sigmoid skip-gate mix gated/mean pool (50/50 init)
+44	2026-05-18T06:02:51	5f33209cb0	maccs+avalon+scage2+mole	scaffold	10	0.849673	0.003175	0.532992	0.007517	0.591641	9.78	False	2-layer MLP head (Linear-GELU-Linear, hidden=d_model/2)
+45	2026-05-18T06:13:47	cc2733ed9d	maccs+avalon+scage2+mole	scaffold	10	0.85003	0.003033	0.533705	0.009133	0.428134	9.64	False	mixup alpha=0.2 in training loop
+46	2026-05-18T06:24:42	e2514ab942	maccs+avalon+scage2+mole	scaffold	10	0.846946	0.002712	0.529818	0.008013	0.556116	9.69	False	Lookahead(k=5, alpha=0.5) around AdamW
+47	2026-05-18T06:34:57	89e67c869e	maccs+avalon+scage2+mole	scaffold	10	0.851107	0.002354	0.536784	0.006096	0.573637	9.62	False	mod_drop 0.15 -> 0.10 retry on AdamW stack
+48	2026-05-18T06:45:36	54743e1eb1	maccs+avalon+scage2+mole	scaffold	10	0.851981	0.003579	0.541267	0.005572	0.575285	9.9	False	DROP_V_PATH 0.10 -> 0.05 retry on AdamW stack
+49	2026-05-18T07:00:05	198cbe967c	maccs+avalon+scage2+mole	scaffold	10	0.850541	0.002835	0.538471	0.01285	0.550775	13.33	False	cross-modal FiLM safe-init retry on AdamW stack
+50	2026-05-18T07:11:04	b5ad508da6	maccs+avalon+scage2+mole	scaffold	10	0.848428	0.002481	0.534857	0.009662	0.541286	9.91	False	per-modality LayerNorm after projection retry on AdamW stack
+51	2026-05-18T07:21:15	ea64803435	maccs+avalon+scage2+mole	scaffold	10	0.851771	0.003601	0.538959	0.00726	0.55244	9.45	False	remove proj_scale (iter20)
+52	2026-05-18T07:31:05	23f7ed5a13	maccs+avalon+scage2+mole	scaffold	10	0.847782	0.00253	0.529111	0.009046	0.509103	8.81	False	SGU spatial_proj identity-init (eye weight, zero bias)
+53	2026-05-18T07:42:00	007e7ede57	maccs+avalon+scage2+mole	scaffold	10	0.852038	0.003452	0.539887	0.005314	0.553785	9.68	True	shadow patience 10 -> 15 inside train_model
+54	2026-05-18T07:53:21	162480133c	maccs+avalon+scage2+mole	scaffold	10	0.849998	0.00332	0.536448	0.010843	0.538617	9.36	False	cosine annealing alone (T_max=50, eta_min=lr*0.01)
+55	2026-05-18T08:04:09	bbc2d6a68a	maccs+avalon+scage2+mole	scaffold	10	0.84842	0.003403	0.528034	0.012198	0.532976	9.65	False	BatchNorm1d on raw flat input
+56	2026-05-18T08:14:46	376d0ba428	maccs+avalon+scage2+mole	scaffold	10	0.851546	0.003176	0.536899	0.007378	0.552947	9.92	False	head dropout 0.20 -> 0.10 (sweep down)
+57	2026-05-18T08:25:17	35ebdc8aa4	maccs+avalon+scage2+mole	scaffold	10	0.851672	0.003416	0.538896	0.006662	0.575326	9.91	False	Gaussian token noise std=0.01 train-only
+58	2026-05-18T08:35:57	0a28b7a6f8	maccs+avalon+scage2+mole	scaffold	10	0.851985	0.003191	0.53876	0.005786	0.556084	9.8	False	AdamW split wd (0.01 on weights, 0 on biases/norms)
+59	2026-05-18T08:46:46	6e003034f9	maccs+avalon+scage2+mole	scaffold	10	0.850614	0.00271	0.528084	0.011389	0.57417	9.88	False	hybrid gated pool (static alpha + per-sample content score)
+60	2026-05-18T08:57:25	dc6eb5246b	maccs+avalon+scage2+mole	scaffold	10	0.850311	0.002772	0.535359	0.007645	0.563437	9.83	False	per-element block dropout (p=0.10) inside gMLPBlock
+61	2026-05-18T09:07:42	8f2980cf09	maccs+avalon+scage2+mole	scaffold	10	0.850836	0.00338	0.533548	0.010243	0.560043	9.6	False	gMLPBlock activation GELU -> SiLU (Swish)
+62	2026-05-18T09:17:39	b492a05d85	maccs+avalon+scage2+mole	scaffold	10	0.850847	0.00278	0.539016	0.006116	0.428114	9.13	False	label smoothing 0.05 train-only retry on AdamW stack
+63	2026-05-18T09:27:42	281e16e77e	maccs+avalon+scage2+mole	scaffold	10	0.851101	0.002407	0.534316	0.008209	0.564918	9.35	False	AdamW beta1 0.9 -> 0.95
+64	2026-05-18T09:38:10	fbc1c334f6	maccs+avalon+scage2+mole	scaffold	10	0.851277	0.003193	0.539417	0.008144	0.548765	9.52	False	DROP_V_PATH 0.10 -> 0.08 (finer sweep)
+65	2026-05-18T09:48:41	1b522e8f98	maccs+avalon+scage2+mole	scaffold	10	0.851769	0.003141	0.537429	0.00862	0.55238	9.96	False	DROP_V_PATH 0.10 -> 0.12 (finer sweep up)
+66	2026-05-18T09:59:05	0f5d8b5791	maccs+avalon+scage2+mole	scaffold	10	0.851439	0.002441	0.541482	0.007472	0.559875	9.81	False	mod_drop_p 0.15 -> 0.13 (finer sweep down)
+67	2026-05-18T10:09:25	2711e128f5	maccs+avalon+scage2+mole	scaffold	10	0.849882	0.002634	0.540464	0.010743	0.54787	9.42	False	continuous modality scale noise Uniform(0.7, 1.3) instead of mod_drop
+68	2026-05-18T10:18:53	07f497e3d9	maccs+avalon+scage2+mole	scaffold	10	0.836615	0.005738	0.505589	0.013101	0.553785	8.58	False	best_state = online_state at EMA-best epoch (EMA selector only)
+69	2026-05-18T15:03:50	fc4c3958d2	maccs+avalon+scage2+mole	scaffold	10	0.85177	0.003288	0.540117	0.012416	0.552533	9.83	False	per-modality type embedding (d_model-dim, init=0)
+70	2026-05-18T15:16:40	fe4fd177ff	maccs+avalon+scage2+mole	scaffold	10	0.852005	0.003455	0.539232	0.005505	0.553785	9.72	False	top-3 EMA snapshot averaging at end of training
+71	2026-05-18T15:26:01	554695c3eb	maccs+avalon+scage2+mole	scaffold	10	0.852004	0.003448	0.541446	0.005583	0.553785	8.44	False	top-2 EMA snapshot averaging (sweep K=3->2)
+72	2026-05-18T15:37:17	606db70238	maccs+avalon+scage2+mole	scaffold	10	0.851904	0.003438	0.54163	0.009643	0.550572	9.37	False	asymmetric mod_drop (fp 0.10 / embed 0.20)
+73	2026-05-18T15:47:19	1ca13540aa	maccs+avalon+scage2+mole	scaffold	10	0.850939	0.003736	0.530519	0.015129	0.546609	8.76	False	NAdam optimizer + manual decoupled wd=0.01
+74	2026-05-18T15:57:52	ff03dafbe3	maccs+avalon+scage2+mole	scaffold	10	0.84506	0.001943	0.533832	0.004766	0.518015	9.03	False	per-block per-channel LayerScale init=0.1
+75	2026-05-18T16:08:02	99a88e0eb0	maccs+avalon+scage2+mole	scaffold	10	0.850161	0.002795	0.539157	0.011335	0.523724	8.97	False	per-sample block-level DropPath p=0.05 on AdamW stack
+76	2026-05-18T16:19:01	3b2078d04e	maccs+avalon+scage2+mole	scaffold	10	0.851812	0.003362	0.535814	0.007501	0.560853	10.11	False	AdamW eps 1e-8 -> 1e-6
+77	2026-05-18T16:30:08	cd669fcee0	maccs+avalon+scage2+mole	scaffold	10	0.850284	0.002285	0.53545	0.009827	0.566347	9.89	False	head bias init = log(n_pos/n_neg) from train data
+78	2026-05-18T16:41:42	3536be7d35	maccs+avalon+scage2+mole	scaffold	10	0.849937	0.003868	0.534262	0.009599	0.552933	10.31	False	EMA warmup 1 -> 0 (continue downward sweep)
+79	2026-05-18T16:52:17	ea9aa67f53	maccs+avalon+scage2+mole	scaffold	10	0.851566	0.00391	0.537303	0.005823	0.545936	9.71	False	AdamW betas=(0.9, 0.99) [beta2 0.999 -> 0.99]
+80	2026-05-18T17:06:10	9699512da0	maccs+avalon+scage2+mole	scaffold	10	0.852566	0.003048	0.539678	0.006314	0.4462	12.35	True	R-Drop consistency reg (symmetric Bernoulli-KL on 2 forwards, alpha=1.0)
+81	2026-05-18T17:27:57	a2f6f1516d	maccs+avalon+scage2+mole	scaffold	10	0.852515	0.002092	0.540384	0.007985	0.470944	10.37	False	R-Drop alpha 1.0 -> 0.5 (sweep down)
+82	2026-05-18T17:38:56	fdf0a06574	maccs+avalon+scage2+mole	scaffold	10	0.851629	0.00309	0.537857	0.009141	0.438249	10.46	False	R-Drop alpha 1.0 -> 2.0 (sweep up)
+83	2026-05-18T17:50:22	87bf41d571	maccs+avalon+scage2+mole	scaffold	10	0.852889	0.003128	0.54115	0.008841	0.454924	10.75	True	R-Drop + mod_drop 0.15 -> 0.10
+84	2026-05-18T18:12:08	6e35852072	maccs+avalon+scage2+mole	scaffold	10	0.852743	0.003323	0.543669	0.007851	0.491761	10.6	False	R-Drop + mod_drop 0.10 -> 0.05 (continue sweep)
+85	2026-05-18T18:23:35	1862f9b0bf	maccs+avalon+scage2+mole	scaffold	10	0.852674	0.002775	0.540103	0.008094	0.45902	10.81	False	DROP_V_PATH 0.10 -> 0.05 on R-Drop stack
+86	2026-05-18T18:35:05	9ad593fb6f	maccs+avalon+scage2+mole	scaffold	10	0.853414	0.003059	0.537508	0.008333	0.46403	10.78	True	head dropout 0.20 -> 0.10 on R-Drop stack
+87	2026-05-18T18:56:39	22fdda5f50	maccs+avalon+scage2+mole	scaffold	10	0.852828	0.00332	0.540696	0.008069	0.460077	10.04	False	head dropout 0.10 -> 0.05 (continue sweep down)
+88	2026-05-18T19:08:56	ff5425e976	maccs+avalon+scage2+mole	scaffold	10	0.853428	0.002896	0.538219	0.009214	0.468292	10.65	True	AdamW wd 0.01 -> 0.005 on R-Drop stack
+89	2026-05-18T19:30:45	a13368a414	maccs+avalon+scage2+mole	scaffold	10	0.853267	0.002884	0.535768	0.007588	0.471058	10.57	False	AdamW wd 0.005 -> 0.003 (continue sweep down)
+90	2026-05-18T19:42:14	c4698d1e06	maccs+avalon+scage2+mole	scaffold	10	0.852237	0.00264	0.538517	0.007997	0.433165	10.83	False	EMA decay 0.9995 -> 0.9997 on R-Drop stack
+91	2026-05-18T19:50:49	2ec6bbde39	maccs+avalon+scage2+mole	scaffold	10	0.853232	0.00296	0.539843	0.006984	0.469915	8.03	False	EMA decay 0.9995 -> 0.999 on R-Drop stack
+92	2026-05-18T20:01:47	e5c424309e	maccs+avalon+scage2+mole	scaffold	10	0.852742	0.003429	0.537215	0.006603	0.456982	10.33	False	mod_drop 0.10 -> 0.12 (fine sweep up)
+93	2026-05-18T20:10:07	663cbb1eb2	maccs+avalon+scage2+mole	scaffold	10	0.853586	0.00267	0.539245	0.007487	0.470392	7.61	True	DROP_V_PATH 0.10 -> 0.08 (fine sweep)
+94	2026-05-18T20:25:58	8cbdc85c6b	maccs+avalon+scage2+mole	scaffold	10	0.853025	0.002581	0.538631	0.006567	0.45805	7.44	False	DROP_V_PATH 0.08 -> 0.06 (continue sweep)
+95	2026-05-18T20:34:12	5ae1a95871	maccs+avalon+scage2+mole	scaffold	10	0.853205	0.002529	0.541461	0.007245	0.482168	7.56	False	R-Drop alpha 1.0 -> 0.7 (fine sweep)
+96	2026-05-18T20:42:24	c936358d4a	maccs+avalon+scage2+mole	scaffold	10	0.853365	0.002796	0.539392	0.007569	0.464643	7.55	False	AdamW wd 0.005 -> 0.007 (fine sweep up)
+97	2026-05-18T20:50:43	01bdd43182	maccs+avalon+scage2+mole	scaffold	10	0.85324	0.003139	0.536329	0.005192	0.466962	7.64	False	head dropout 0.10 -> 0.15 (fine sweep up)
+98	2026-05-18T20:59:17	18c3e6bdc0	maccs+avalon+scage2+mole	scaffold	10	0.853514	0.002664	0.539925	0.007333	0.470392	7.59	False	top-3 EMA snapshot averaging on R-Drop stack
+99	2026-05-18T21:07:36	19469b6b24	maccs+avalon+scage2+mole	scaffold	10	0.853007	0.003041	0.540055	0.008065	0.464952	7.51	False	DROP_V_PATH 0.08 -> 0.07 (fine sweep)
+100	2026-05-18T21:16:06	7bcdf114a1	maccs+avalon+scage2+mole	scaffold	10	0.853119	0.002813	0.53755	0.006741	0.457927	7.51	False	DROP_V_PATH 0.08 -> 0.09 (fine sweep up)
+101	2026-05-19T20:05:46	0a8503895d	maccs+avalon+scage2+mole	scaffold	10	0.851195	0.002283	0.541373	0.006715	0.473204	13.28	False	LayerNorm after per-modality projection on R-Drop stack
+102	2026-05-19T20:21:15	c406b49928	maccs+avalon+scage2+mole	scaffold	10	0.850075	0.002324	0.539513	0.008383	0.500724	14.55	False	cross-modal FiLM (safe-init) on R-Drop stack
+103	2026-05-19T20:34:49	1c33c9e537	maccs+avalon+scage2+mole	scaffold	10	0.853206	0.00273	0.537469	0.00735	0.457174	13.01	False	hybrid attention pool (alpha + content scores, safe-init)
+104	2026-05-19T20:47:34	983bce8d3a	maccs+avalon+scage2+mole	scaffold	10	0.853145	0.002562	0.538988	0.00828	0.460084	12.19	False	learnable residual scale on SGU spatial path (init exp(0)=1)
+105	2026-05-19T21:01:48	a95a099879	maccs+avalon+scage2+mole	scaffold	10	0.847431	0.00211	0.524372	0.00936	0.392432	13.02	False	R-Drop MSE on logits instead of Bernoulli-KL on probs
+106	2026-05-19T21:15:25	7af250ebf7	maccs+avalon+scage2+mole	scaffold	10	0.853597	0.002615	0.537094	0.008213	0.47118	12.86	True	R-Drop alpha linear warmup 0->1.0 over 5 epochs
+107	2026-05-19T21:40:35	1ee73b4dcf	maccs+avalon+scage2+mole	scaffold	10	0.85359	0.002789	0.540605	0.007534	0.470386	11.49	False	R-Drop warmup 5 -> 3 epochs (sweep down)
+108	2026-05-19T21:52:59	28df8506f5	maccs+avalon+scage2+mole	scaffold	10	0.852985	0.002251	0.540024	0.008813	0.47256	11.89	False	R-Drop warmup 5 -> 7 epochs (sweep up)
+109	2026-05-19T22:05:22	73c28590b1	maccs+avalon+scage2+mole	scaffold	10	0.851754	0.002809	0.541127	0.006085	0.452299	11.77	False	per-sample stochastic depth on gMLPBlock p=0.05 on warmed R-Drop stack
+110	2026-05-19T22:19:08	9248db5979	maccs+avalon+scage2+mole	scaffold	10	0.852735	0.002771	0.537662	0.008628	0.409513	13.17	False	BCE label smoothing 0.05 on warmed R-Drop stack
+111	2026-05-19T22:32:59	f85085fd75	maccs+avalon+scage2+mole	scaffold	10	0.852897	0.003114	0.538451	0.008137	0.495578	12.93	False	gradient clipping max_norm=1.0 on warmed R-Drop stack
+112	2026-05-19T22:46:06	d682f0e908	maccs+avalon+scage2+mole	scaffold	10	0.850664	0.002877	0.541094	0.008802	0.516249	12.38	False	ablate mod_drop_p 0.10 -> 0.0 on warmed R-Drop stack
+113	2026-05-19T23:00:09	8256b950aa	maccs+avalon+scage2+mole	scaffold	10	0.853396	0.002506	0.539031	0.010598	0.474781	13.18	False	cosine anneal R-Drop alpha 1.0->0.5 post-warmup
+114	2026-05-19T23:12:00	17c5dfd2eb	maccs+avalon+scage2+mole	scaffold	10	0.853668	0.002707	0.536039	0.005245	0.476521	10.88	True	sigmoid skip-gate mix gated+mean pool on warmed R-Drop stack
+115	2026-05-19T23:44:03	6a31f9a29d	maccs+avalon+scage2+mole	scaffold	10	0.85355	0.002782	0.539383	0.005791	0.48047	14.46	False	ablate to mean pool only (no alpha/skip_gate weighting)
+116	2026-05-19T23:52:27	9067f1a50a	maccs+avalon+scage2+mole	scaffold	10	0.85369	0.002709	0.537023	0.005185	0.473774	7.73	True	per-feature skip gate (d_model gates) instead of scalar
+117	2026-05-20T00:09:28	013ac225b5	maccs+avalon+scage2+mole	scaffold	10	0.852448	0.002855	0.534626	0.009158	0.480174	8.07	False	3-way per-feature softmax mix [gated, mean, max] pools
+118	2026-05-20T00:18:30	01245346bb	maccs+avalon+scage2+mole	scaffold	10	0.851758	0.002563	0.534549	0.010302	0.510022	8.16	False	input-dependent additive correction to per-feature skip gate
+119	2026-05-20T00:27:02	9c34be4c22	maccs+avalon+scage2+mole	scaffold	10	0.85369	0.002709	0.537023	0.005185	0.473774	7.77	False	shadow patience 10 -> 15 inside train_model on R-Drop+warmup+skipgate stack
+120	2026-05-20T00:35:36	33fbd60c9e	maccs+avalon+scage2+mole	scaffold	10	0.852389	0.002949	0.540238	0.008934	0.467376	7.67	False	cosine LR annealing (T_max=num_epochs, eta_min=lr*0.01)
+121	2026-05-20T00:44:55	d0a1b554ae	maccs+avalon+scage2+mole	scaffold	10	0.851305	0.002748	0.539069	0.00675	0.525775	8.23	False	channel-wise SE block on pooled vector (init=identity)
+122	2026-05-20T00:56:13	25aba9e32b	maccs+avalon+scage2+mole	scaffold	10	0.852383	0.002295	0.537471	0.007204	0.473726	10.37	False	3-way R-Drop (3 forwards, 3 pairwise sym Bernoulli-KL)
+123	2026-05-20T01:04:53	61bcd5234b	maccs+avalon+scage2+mole	scaffold	10	0.853167	0.003187	0.539962	0.006441	0.404866	7.7	False	BCEWithLogitsLoss pos_weight=0.7 on warmed R-Drop+skipgate stack
+124	2026-05-20T01:13:08	30685a5b21	maccs+avalon+scage2+mole	scaffold	10	0.853369	0.003017	0.540066	0.008399	0.480859	7.62	False	R-Drop alpha peak 1.0 -> 0.8 (with warmup)
+125	2026-05-20T01:21:25	50f89edb95	maccs+avalon+scage2+mole	scaffold	10	0.85341	0.00255	0.538229	0.008349	0.479517	7.71	False	R-Drop alpha cosine warmup (replace linear)
+126	2026-05-20T01:32:17	deba458893	maccs+avalon+scage2+mole	scaffold	10	0.843656	0.001074	0.531276	0.007016	0.459045	10.14	False	per-block per-channel LayerScale init=1e-2 on warmed R-Drop+skipgate stack
+127	2026-05-20T01:47:52	17c64e94a7	maccs+avalon+scage2+mole	scaffold	10	0.850539	0.002706	0.535659	0.005432	0.398637	14.91	False	focal loss (gamma=2) replacing BCE inside R-Drop
+128	2026-05-20T02:02:08	05beb7389f	maccs+avalon+scage2+mole	scaffold	10	0.853549	0.002748	0.539649	0.006244	0.48458	13.6	False	per-channel-per-modality alpha (seq_len x d_model softmax)
+129	2026-05-20T02:17:19	ba8f9aa63d	maccs+avalon+scage2+mole	scaffold	10	0.853048	0.002413	0.538522	0.010543	0.480527	14.43	False	residual link over backbone (X_in + backbone(X_in))
+130	2026-05-20T02:32:05	d6cd465216	maccs+avalon+scage2+mole	scaffold	10	0.850625	0.005142	0.527518	0.006625	0.454236	14.03	False	replace pre-head LayerNorm with BatchNorm1d
+131	2026-05-20T02:46:50	671a409aa8	maccs+avalon+scage2+mole	scaffold	10	0.853636	0.00276	0.540291	0.007066	0.474199	14.0	False	learnable temperature on softmax(alpha) pool weighting
+132	2026-05-20T03:01:36	26133865a1	maccs+avalon+scage2+mole	scaffold	10	0.85317	0.003208	0.540685	0.007511	0.483921	14.03	False	mod_drop_p warmup 0 -> 0.10 over 5 epochs
+133	2026-05-20T03:16:30	89ec037022	maccs+avalon+scage2+mole	scaffold	10	0.851628	0.002936	0.536458	0.007278	0.473774	13.94	False	TTA in eval_model (1 eval + K=4 train-mode forwards, averaged probs)
+134	2026-05-20T03:30:40	ef0e58e55d	maccs+avalon+scage2+mole	scaffold	10	0.851479	0.003127	0.538686	0.00796	0.467149	13.5	False	light input feature dropout p=0.03 on raw flat input
+135	2026-05-20T03:45:18	c501df4057	maccs+avalon+scage2+mole	scaffold	10	0.850983	0.002564	0.539477	0.003926	0.420284	13.94	False	mixup alpha=0.1 (gentle) on warmed R-Drop+skipgate stack
+136	2026-05-20T03:59:59	3e6f609283	maccs+avalon+scage2+mole	scaffold	10	0.851544	0.002517	0.532803	0.008276	0.475812	14.13	False	SGU n_heads 2 -> 4 on warmed R-Drop+skipgate stack
+137	2026-05-20T04:14:45	37611df4ac	maccs+avalon+scage2+mole	scaffold	10	0.849488	0.00247	0.531311	0.008817	0.493165	14.18	False	AdamW lr 1e-4 -> 5e-5 (half)
+138	2026-05-20T04:27:44	621f922c3c	maccs+avalon+scage2+mole	scaffold	10	0.852475	0.003436	0.536394	0.003404	0.46529	12.44	False	AdamW lr 1e-4 -> 2e-4 (double)
+139	2026-05-20T04:42:17	fbd5c0077c	maccs+avalon+scage2+mole	scaffold	10	0.853562	0.002445	0.538632	0.008633	0.471192	13.72	False	EMA decay 0.9995 -> 0.9996 (fine sweep up)
+140	2026-05-20T04:56:48	3879ffb52c	maccs+avalon+scage2+mole	scaffold	10	0.853514	0.003222	0.537026	0.010587	0.481348	13.79	False	mod_drop_p 0.10 -> 0.08 (fine sweep down)
+141	2026-05-20T05:11:14	8d20b9868c	maccs+avalon+scage2+mole	scaffold	10	0.853249	0.002954	0.540492	0.00581	0.480056	13.62	False	R-Drop warmup 5 -> 10 epochs (slower ramp)
+142	2026-05-20T05:25:41	b72d0a4ca1	maccs+avalon+scage2+mole	scaffold	10	0.853713	0.002701	0.538112	0.007688	0.474687	13.76	True	ablate proj_scale (skip per-modality learnable scale)
+143	2026-05-20T05:55:02	5027008297	maccs+avalon+scage2+mole	scaffold	10	0.851133	0.002196	0.541218	0.0081	0.485527	14.43	False	per-modality LayerNorm after projection (post proj_scale ablation)
+144	2026-05-20T06:09:17	8c4b3eacb9	maccs+avalon+scage2+mole	scaffold	10	0.853017	0.003077	0.539009	0.007538	0.472735	13.52	False	DROP_V_PATH 0.08 -> 0.10 after proj_scale ablation
+145	2026-05-20T06:23:32	4ad300f16a	maccs+avalon+scage2+mole	scaffold	10	0.853402	0.002896	0.539712	0.006445	0.471114	13.56	False	head dropout 0.10 -> 0.07 after proj_scale ablation
+146	2026-05-20T06:37:43	1334c0c665	maccs+avalon+scage2+mole	scaffold	10	0.853209	0.003057	0.537946	0.007149	0.467521	13.47	False	head dropout 0.10 -> 0.13 (sweep up post proj_scale ablation)
+147	2026-05-20T06:51:55	2147ae2e48	maccs+avalon+scage2+mole	scaffold	10	0.852957	0.002996	0.539199	0.005815	0.483904	13.65	False	mod_drop_p 0.10 -> 0.07 (sweep down post proj_scale ablation)
+148	2026-05-20T07:06:28	b14441d4d1	maccs+avalon+scage2+mole	scaffold	10	0.853729	0.00264	0.541932	0.007801	0.478855	13.96	True	AdamW wd 0.005 -> 0.003 (sweep down post proj_scale ablation)
+149	2026-05-20T07:34:35	b926339c36	maccs+avalon+scage2+mole	scaffold	10	0.853343	0.002546	0.541252	0.007841	0.471773	13.5	False	AdamW wd 0.003 -> 0.002 (continue sweep down)
+150	2026-05-20T07:49:04	a5f12b880e	maccs+avalon+scage2+mole	scaffold	10	0.853553	0.002577	0.538065	0.010201	0.474961	13.9	False	AdamW wd 0.003 -> 0.004 (fine sweep up)
+151	2026-05-20T08:03:38	cf1303583f	maccs+avalon+scage2+mole	scaffold	10	0.853025	0.003146	0.53744	0.005386	0.470624	14.03	False	mod_drop_p 0.10 -> 0.13 (sweep up post proj_scale+wd ablations)
+152	2026-05-20T08:17:27	4d5facba5d	maccs+avalon+scage2+mole	scaffold	10	0.853282	0.003042	0.540024	0.007522	0.476099	13.33	False	DROP_V_PATH 0.08 -> 0.09 (sweep up post proj_scale+wd ablations)
+153	2026-05-20T08:30:08	1ac6a3f63e	maccs+avalon+scage2+mole	scaffold	10	0.853658	0.002654	0.539319	0.00989	0.476962	12.21	False	EMA decay 0.9995 -> 0.9993 (sweep down post ablations)
+154	2026-05-20T08:44:00	6d8046c6a8	maccs+avalon+scage2+mole	scaffold	10	0.852699	0.002581	0.539236	0.008243	0.493739	13.34	False	EMA warmup 1 -> 2 epochs (sweep up post ablations)
+155	2026-05-20T08:57:34	d0bac28146	maccs+avalon+scage2+mole	scaffold	10	0.853584	0.002558	0.538702	0.007435	0.484725	13.01	False	DROP_V_PATH 0.08 -> 0.07 (sweep down post ablations)
+156	2026-05-20T09:11:32	7f9b1becbf	maccs+avalon+scage2+mole	scaffold	10	0.852992	0.002733	0.540119	0.009178	0.46549	13.29	False	mod_drop_p 0.10 -> 0.11 (fine sweep up post ablations)
+157	2026-05-20T09:25:20	515f76f826	maccs+avalon+scage2+mole	scaffold	10	0.853196	0.002771	0.539133	0.009222	0.46223	13.18	False	R-Drop alpha peak 1.0 -> 1.1 post ablations
+158	2026-05-20T09:39:46	7b586732bb	maccs+avalon+scage2+mole	scaffold	10	0.853494	0.002778	0.540387	0.00752	0.48004	13.89	False	R-Drop warmup 5 -> 6 epochs (fine sweep up post ablations)
+159	2026-05-20T09:53:34	df1f0d436c	maccs+avalon+scage2+mole	scaffold	10	0.853135	0.00257	0.538759	0.010744	0.467277	13.17	False	R-Drop warmup 5 -> 4 epochs (fine sweep down)
+160	2026-05-20T11:58:53	a270d20ac1	maccs+avalon+scage2+mole	scaffold	10	0.853067	0.002813	0.544121	0.008971	0.553675	13.0	False	R-Drop symmetric KL -> JSD (KL to mixture)
+161	2026-05-20T12:13:18	83ee9b804d	maccs+avalon+scage2+mole	scaffold	10	0.853366	0.00286	0.534114	0.007179	0.486064	13.64	False	DROP_V_PATH per-sample -> per-token (B, seq_len, 1)
+162	2026-05-20T12:27:45	43f17764ff	maccs+avalon+scage2+mole	scaffold	10	0.847916	0.002607	0.534722	0.009297	0.510057	13.43	False	mod_drop only on fp modalities (preserve embed tokens)
+163	2026-05-20T12:43:41	e24183345d	maccs+avalon+scage2+mole	scaffold	10	0.85268	0.003016	0.535432	0.012303	0.479079	14.9	False	gradient noise injection std=1e-4 before AdamW step
+164	2026-05-20T12:58:25	c1d8417d30	maccs+avalon+scage2+mole	scaffold	10	0.853052	0.002751	0.53897	0.0086	0.470968	13.42	False	post-SGU FFN dropout p=0.05 inside gMLPBlock
+165	2026-05-20T13:12:41	3d78493f39	maccs+avalon+scage2+mole	scaffold	10	0.850578	0.003159	0.533775	0.01001	0.491876	13.47	False	warmup(3) + cosine to lr*0.1 on current best stack
+166	2026-05-20T13:27:14	4492e3286e	maccs+avalon+scage2+mole	scaffold	10	0.852791	0.002286	0.536713	0.009672	0.493949	13.34	False	pre-pool per-token LayerNorm (move LN from after pool)
+167	2026-05-20T13:42:33	bd6c1024b2	maccs+avalon+scage2+mole	scaffold	10	0.853694	0.002633	0.542228	0.00848	0.478855	13.96	False	top-2 EMA snapshot averaging at end of training
+168	2026-05-20T13:57:16	4e222e985b	maccs+avalon+scage2+mole	scaffold	10	0.849558	0.002474	0.536559	0.01045	0.49654	13.77	False	2-layer MLP head retry on iter148 stack
+169	2026-05-20T14:11:41	17ff582c1a	maccs+avalon+scage2+mole	scaffold	10	0.850888	0.002279	0.545143	0.012902	0.579063	13.4	False	move mod_drop from pre-backbone to post-backbone
+170	2026-05-20T14:25:53	5d9e604183	maccs+avalon+scage2+mole	scaffold	10	0.852413	0.002724	0.540366	0.005775	0.468262	13.52	False	anneal mod_drop_p 0.15 -> 0.05 across epochs
+171	2026-05-20T14:40:56	c18762f4fd	maccs+avalon+scage2+mole	scaffold	10	0.85304	0.002412	0.539192	0.009222	0.467318	13.95	False	alpha init biased toward embed tokens
+172	2026-05-20T14:55:48	2c1e9e0fe7	maccs+avalon+scage2+mole	scaffold	10	0.853814	0.002666	0.538697	0.005975	0.476054	13.91	True	AdamW split wd (no-decay for norms/biases/scalars)
+173	2026-05-20T15:20:27	5d27916efb	maccs+avalon+scage2+mole	scaffold	10	0.853384	0.002597	0.53769	0.009222	0.468324	10.82	False	split-wd decay rate 0.003 -> 0.005 (sweep up)
+174	2026-05-20T15:31:38	e367602a58	maccs+avalon+scage2+mole	scaffold	10	0.853418	0.002702	0.537729	0.007535	0.478471	10.76	False	split-wd decay rate 0.003 -> 0.002 (sweep down)
+175	2026-05-20T15:43:03	df596b2c59	maccs+avalon+scage2+mole	scaffold	10	0.852989	0.002722	0.540579	0.00972	0.468579	11.0	False	mod_drop_p 0.10 -> 0.12 on split-wd stack
+176	2026-05-20T15:54:26	af4a2b92e2	maccs+avalon+scage2+mole	scaffold	10	0.853004	0.002966	0.537151	0.008218	0.481909	10.81	False	mod_drop_p 0.10 -> 0.08 on split-wd stack
+177	2026-05-20T16:05:58	8a3e694441	maccs+avalon+scage2+mole	scaffold	10	0.853106	0.003086	0.536493	0.005372	0.476239	10.9	False	DROP_V_PATH 0.08 -> 0.10 on split-wd stack
+178	2026-05-20T16:17:13	146a9e4505	maccs+avalon+scage2+mole	scaffold	10	0.852953	0.002529	0.537184	0.008303	0.466682	10.79	False	head dropout 0.10 -> 0.15 on split-wd stack
+179	2026-05-20T16:28:39	0bb7fcc0cf	maccs+avalon+scage2+mole	scaffold	10	0.853639	0.002643	0.536594	0.011071	0.468195	11.07	False	R-Drop alpha peak 1.0 -> 1.2 on split-wd stack
+180	2026-05-20T16:40:01	e5f37c2e72	maccs+avalon+scage2+mole	scaffold	10	0.853367	0.002879	0.541514	0.009802	0.481095	11.0	False	R-Drop alpha peak 1.0 -> 0.8 on split-wd stack
+181	2026-05-20T16:51:35	f657356cad	maccs+avalon+scage2+mole	scaffold	10	0.853645	0.002412	0.537378	0.004203	0.469362	11.05	False	EMA decay 0.9995 -> 0.9996 on split-wd stack
+182	2026-05-20T17:03:02	269eda3ae6	maccs+avalon+scage2+mole	scaffold	10	0.853093	0.003071	0.541203	0.007779	0.475322	10.9	False	AdamW betas (0.9, 0.95) on split-wd stack
+183	2026-05-20T17:15:57	4d8f640efd	maccs+avalon+scage2+mole	scaffold	10	0.853064	0.00281	0.53655	0.010294	0.474631	12.54	False	AdamW betas (0.9, 0.99) on split-wd stack
+184	2026-05-20T17:31:33	74ef379b91	maccs+avalon+scage2+mole	scaffold	10	0.853433	0.002652	0.540155	0.006961	0.479937	15.19	False	ablate per-feature skip gate -> scalar on split-wd stack
+185	2026-05-20T17:47:35	b31cbc6f9b	maccs+avalon+scage2+mole	scaffold	10	0.853526	0.002562	0.538763	0.008683	0.473424	15.58	False	AdamW eps 1e-8 -> 1e-7 on split-wd stack
+186	2026-05-20T18:03:21	e3548385db	maccs+avalon+scage2+mole	scaffold	10	0.849068	0.002574	0.528568	0.006595	0.489167	14.93	False	SGU spatial_proj weight init std=0.02 (near-identity start)
+187	2026-05-20T18:19:04	38d7c57488	maccs+avalon+scage2+mole	scaffold	10	0.853454	0.003253	0.537575	0.005663	0.489417	15.18	False	gradient clipping max_norm=2.0 on split-wd stack
+188	2026-05-20T18:31:23	4d4eb271b1	maccs+avalon+scage2+mole	scaffold	10	0.851607	0.003048	0.536338	0.004282	0.478283	11.74	False	EMA warmup 1 -> 0 epochs on split-wd stack
+189	2026-05-20T18:41:57	b1532fc06e	maccs+avalon+scage2+mole	scaffold	10	0.851466	0.001868	0.537941	0.007157	0.487748	9.96	False	SGU n_heads 2 -> 1 on split-wd stack (ablate multi-head)
+190	2026-05-20T18:52:47	973a7fb027	maccs+avalon+scage2+mole	scaffold	10	0.850785	0.003014	0.534898	0.006593	0.474907	9.97	False	linearly ramped stochastic depth on gMLPBlocks (max p=0.05)
+191	2026-05-20T19:03:34	12b0ffc6a8	maccs+avalon+scage2+mole	scaffold	10	0.853406	0.003001	0.535906	0.006582	0.481478	10.06	False	head dropout 0.10 -> 0.12 on split-wd stack
+192	2026-05-20T19:14:17	312038d75f	maccs+avalon+scage2+mole	scaffold	10	0.853436	0.002791	0.539063	0.008397	0.475874	10.29	False	R-Drop warmup 5 -> 6 epochs on split-wd stack
+193	2026-05-20T19:23:29	cbe48f7593	maccs+avalon+scage2+mole	scaffold	10	0.853721	0.002495	0.538718	0.004375	0.457055	8.63	False	AdamW lr 1e-4 -> 1.5e-4 on split-wd stack
+194	2026-05-20T19:31:22	3e0efc84b1	maccs+avalon+scage2+mole	scaffold	10	0.854804	0.002611	0.539484	0.0046	0.465645	7.51	True	AdamW lr 1e-4 -> 1.25e-4 on split-wd stack
+195	2026-05-20T19:46:49	5c58dfcd1e	maccs+avalon+scage2+mole	scaffold	10	0.854325	0.002494	0.540612	0.007135	0.466018	7.36	False	AdamW lr 1.25e-4 -> 1.4e-4 (sweep up)
+196	2026-05-20T19:54:49	4e1e9a48f7	maccs+avalon+scage2+mole	scaffold	10	0.853701	0.00249	0.539411	0.008774	0.470669	7.57	False	AdamW lr 1.25e-4 -> 1.1e-4 (sweep down)
+197	2026-05-20T20:01:39	9bc22da482	maccs+avalon+scage2+mole	scaffold	10	0.854947	0.002638	0.538159	0.005505	0.459733	6.43	True	EMA decay 0.9995 -> 0.9993 on lr=1.25e-4 stack
+198	2026-05-20T20:14:16	62eb1e4617	maccs+avalon+scage2+mole	scaffold	10	0.854933	0.002619	0.54065	0.007385	0.466891	5.69	False	EMA decay 0.9993 -> 0.999 (continue sweep down)
+199	2026-05-20T20:21:14	8be1b53b25	maccs+avalon+scage2+mole	scaffold	10	0.854305	0.002459	0.539893	0.00617	0.464371	6.47	False	head dropout 0.10 -> 0.08 on iter197 stack
+200	2026-05-20T20:28:07	629771a6d5	maccs+avalon+scage2+mole	scaffold	10	0.854745	0.002474	0.539535	0.006254	0.460912	6.5	False	AdamW lr 1.25e-4 -> 1.3e-4 (fine sweep up on iter197 stack)

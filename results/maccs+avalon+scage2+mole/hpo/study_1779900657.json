@@ -1,0 +1,480 @@
+{
+  "combo": "maccs+avalon+scage2+mole",
+  "study_name": "auto_iter008_2a465f511f",
+  "n_trials_requested": 30,
+  "n_trials_completed": 8,
+  "search_seeds": [
+    42,
+    100,
+    200
+  ],
+  "confirm_seeds": [
+    42,
+    100,
+    200,
+    300,
+    400,
+    500,
+    600,
+    700,
+    800,
+    900
+  ],
+  "search_num_epochs_override": 30,
+  "search_wall_time_min": 23.13,
+  "best_search_trial": 0,
+  "best_search_mean_val_auc": 0.8553746,
+  "best_search_params": {
+    "lr": 0.00012028100254063813,
+    "lr_min_ratio": 0.22873408594703554,
+    "ema_decay": 0.9988436337588507,
+    "label_smoothing": 0.036346495489906906,
+    "head_dropout": 0.11354821990083572
+  },
+  "top_k_confirm": [
+    {
+      "rank": 1,
+      "trial": 0,
+      "search_mean_val_auc": 0.8553746,
+      "confirm_mean_val_auc": 0.8542457000000001,
+      "confirm_std_val_auc": 0.0027052252420084973,
+      "confirm_per_seed_val_auc": [
+        0.855759,
+        0.854272,
+        0.855235,
+        0.85581,
+        0.857592,
+        0.853204,
+        0.852796,
+        0.854193,
+        0.847265,
+        0.856331
+      ],
+      "holdout": {
+        "nn05": {
+          "per_seed_mean_roc_auc": 0.855725,
+          "per_seed_std_roc_auc": 0.006556,
+          "per_seed_mean_mcc": 0.554535,
+          "per_seed_std_mcc": 0.016642,
+          "per_seed_mean_accuracy": 0.857143,
+          "per_seed_std_accuracy": 0.006079,
+          "per_seed_metrics": [
+            {
+              "roc_auc": 0.839989,
+              "mcc": 0.546951,
+              "accuracy": 0.857143
+            },
+            {
+              "roc_auc": 0.857529,
+              "mcc": 0.55071,
+              "accuracy": 0.857143
+            },
+            {
+              "roc_auc": 0.858411,
+              "mcc": 0.543023,
+              "accuracy": 0.854103
+            },
+            {
+              "roc_auc": 0.860838,
+              "mcc": 0.539743,
+              "accuracy": 0.851064
+            },
+            {
+              "roc_auc": 0.858908,
+              "mcc": 0.554602,
+              "accuracy": 0.857143
+            },
+            {
+              "roc_auc": 0.863376,
+              "mcc": 0.5471,
+              "accuracy": 0.854103
+            },
+            {
+              "roc_auc": 0.851793,
+              "mcc": 0.5471,
+              "accuracy": 0.854103
+            },
+            {
+              "roc_auc": 0.860287,
+              "mcc": 0.577493,
+              "accuracy": 0.863222
+            },
+            {
+              "roc_auc": 0.856702,
+              "mcc": 0.594529,
+              "accuracy": 0.87234
+            },
+            {
+              "roc_auc": 0.849421,
+              "mcc": 0.544099,
+              "accuracy": 0.851064
+            }
+          ]
+        },
+        "total": {
+          "per_seed_mean_roc_auc": 0.875296,
+          "per_seed_std_roc_auc": 0.003139,
+          "per_seed_mean_mcc": 0.610176,
+          "per_seed_std_mcc": 0.011596,
+          "per_seed_mean_accuracy": 0.850338,
+          "per_seed_std_accuracy": 0.004763,
+          "per_seed_metrics": [
+            {
+              "roc_auc": 0.871528,
+              "mcc": 0.610837,
+              "accuracy": 0.851351
+            },
+            {
+              "roc_auc": 0.877015,
+              "mcc": 0.62534,
+              "accuracy": 0.855856
+            },
+            {
+              "roc_auc": 0.875529,
+              "mcc": 0.618746,
+              "accuracy": 0.853604
+            },
+            {
+              "roc_auc": 0.871439,
+              "mcc": 0.603554,
+              "accuracy": 0.847973
+            },
+            {
+              "roc_auc": 0.87861,
+              "mcc": 0.602431,
+              "accuracy": 0.846847
+            },
+            {
+              "roc_auc": 0.878566,
+              "mcc": 0.612812,
+              "accuracy": 0.851351
+            },
+            {
+              "roc_auc": 0.870405,
+              "mcc": 0.596193,
+              "accuracy": 0.845721
+            },
+            {
+              "roc_auc": 0.876562,
+              "mcc": 0.609081,
+              "accuracy": 0.849099
+            },
+            {
+              "roc_auc": 0.87944,
+              "mcc": 0.630494,
+              "accuracy": 0.859234
+            },
+            {
+              "roc_auc": 0.873864,
+              "mcc": 0.592272,
+              "accuracy": 0.842342
+            }
+          ]
+        }
+      },
+      "params": {
+        "lr": 0.00012028100254063813,
+        "lr_min_ratio": 0.22873408594703554,
+        "ema_decay": 0.9988436337588507,
+        "label_smoothing": 0.036346495489906906,
+        "head_dropout": 0.11354821990083572
+      }
+    },
+    {
+      "rank": 2,
+      "trial": 2,
+      "search_mean_val_auc": 0.8551065999999998,
+      "confirm_mean_val_auc": 0.8535736,
+      "confirm_std_val_auc": 0.0032143005211087592,
+      "confirm_per_seed_val_auc": [
+        0.855243,
+        0.853358,
+        0.852857,
+        0.854216,
+        0.857612,
+        0.854134,
+        0.854061,
+        0.852213,
+        0.845198,
+        0.856844
+      ],
+      "holdout": {
+        "nn05": {
+          "per_seed_mean_roc_auc": 0.855543,
+          "per_seed_std_roc_auc": 0.0058,
+          "per_seed_mean_mcc": 0.562349,
+          "per_seed_std_mcc": 0.029381,
+          "per_seed_mean_accuracy": 0.859878,
+          "per_seed_std_accuracy": 0.009264,
+          "per_seed_metrics": [
+            {
+              "roc_auc": 0.839879,
+              "mcc": 0.53135,
+              "accuracy": 0.851064
+            },
+            {
+              "roc_auc": 0.858963,
+              "mcc": 0.589428,
+              "accuracy": 0.869301
+            },
+            {
+              "roc_auc": 0.858798,
+              "mcc": 0.562256,
+              "accuracy": 0.860182
+            },
+            {
+              "roc_auc": 0.858081,
+              "mcc": 0.558558,
+              "accuracy": 0.860182
+            },
+            {
+              "roc_auc": 0.856536,
+              "mcc": 0.558618,
+              "accuracy": 0.857143
+            },
+            {
+              "roc_auc": 0.860838,
+              "mcc": 0.539068,
+              "accuracy": 0.854103
+            },
+            {
+              "roc_auc": 0.852841,
+              "mcc": 0.5471,
+              "accuracy": 0.854103
+            },
+            {
+              "roc_auc": 0.858301,
+              "mcc": 0.618709,
+              "accuracy": 0.87538
+            },
+            {
+              "roc_auc": 0.858632,
+              "mcc": 0.597537,
+              "accuracy": 0.87234
+            },
+            {
+              "roc_auc": 0.852565,
+              "mcc": 0.520868,
+              "accuracy": 0.844985
+            }
+          ]
+        },
+        "total": {
+          "per_seed_mean_roc_auc": 0.874767,
+          "per_seed_std_roc_auc": 0.003021,
+          "per_seed_mean_mcc": 0.613483,
+          "per_seed_std_mcc": 0.0103,
+          "per_seed_mean_accuracy": 0.851577,
+          "per_seed_std_accuracy": 0.004085,
+          "per_seed_metrics": [
+            {
+              "roc_auc": 0.869289,
+              "mcc": 0.610911,
+              "accuracy": 0.850225
+            },
+            {
+              "roc_auc": 0.875529,
+              "mcc": 0.622045,
+              "accuracy": 0.85473
+            },
+            {
+              "roc_auc": 0.873864,
+              "mcc": 0.624042,
+              "accuracy": 0.855856
+            },
+            {
+              "roc_auc": 0.873219,
+              "mcc": 0.602178,
+              "accuracy": 0.847973
+            },
+            {
+              "roc_auc": 0.87551,
+              "mcc": 0.599871,
+              "accuracy": 0.845721
+            },
+            {
+              "roc_auc": 0.878872,
+              "mcc": 0.614784,
+              "accuracy": 0.852477
+            },
+            {
+              "roc_auc": 0.871107,
+              "mcc": 0.609498,
+              "accuracy": 0.850225
+            },
+            {
+              "roc_auc": 0.875676,
+              "mcc": 0.624137,
+              "accuracy": 0.85473
+            },
+            {
+              "roc_auc": 0.879848,
+              "mcc": 0.628264,
+              "accuracy": 0.858108
+            },
+            {
+              "roc_auc": 0.874757,
+              "mcc": 0.599099,
+              "accuracy": 0.845721
+            }
+          ]
+        }
+      },
+      "params": {
+        "lr": 0.00013052485655886854,
+        "lr_min_ratio": 0.19520108555552282,
+        "ema_decay": 0.9987950216022989,
+        "label_smoothing": 0.04776789914877984,
+        "head_dropout": 0.060655408729683044
+      }
+    },
+    {
+      "rank": 3,
+      "trial": 20,
+      "search_mean_val_auc": 0.8550715999999999,
+      "confirm_mean_val_auc": 0.8539351,
+      "confirm_std_val_auc": 0.003104191890009373,
+      "confirm_per_seed_val_auc": [
+        0.856947,
+        0.852601,
+        0.853804,
+        0.855224,
+        0.856979,
+        0.853056,
+        0.853438,
+        0.853219,
+        0.846303,
+        0.85778
+      ],
+      "holdout": {
+        "nn05": {
+          "per_seed_mean_roc_auc": 0.855565,
+          "per_seed_std_roc_auc": 0.007568,
+          "per_seed_mean_mcc": 0.55421,
+          "per_seed_std_mcc": 0.016698,
+          "per_seed_mean_accuracy": 0.857143,
+          "per_seed_std_accuracy": 0.006519,
+          "per_seed_metrics": [
+            {
+              "roc_auc": 0.841092,
+              "mcc": 0.539068,
+              "accuracy": 0.854103
+            },
+            {
+              "roc_auc": 0.858577,
+              "mcc": 0.578047,
+              "accuracy": 0.866261
+            },
+            {
+              "roc_auc": 0.862052,
+              "mcc": 0.539743,
+              "accuracy": 0.851064
+            },
+            {
+              "roc_auc": 0.858742,
+              "mcc": 0.578047,
+              "accuracy": 0.866261
+            },
+            {
+              "roc_auc": 0.856977,
+              "mcc": 0.535492,
+              "accuracy": 0.851064
+            },
+            {
+              "roc_auc": 0.865306,
+              "mcc": 0.537041,
+              "accuracy": 0.848024
+            },
+            {
+              "roc_auc": 0.847656,
+              "mcc": 0.56609,
+              "accuracy": 0.860182
+            },
+            {
+              "roc_auc": 0.862052,
+              "mcc": 0.562256,
+              "accuracy": 0.860182
+            },
+            {
+              "roc_auc": 0.857474,
+              "mcc": 0.566575,
+              "accuracy": 0.863222
+            },
+            {
+              "roc_auc": 0.845725,
+              "mcc": 0.539743,
+              "accuracy": 0.851064
+            }
+          ]
+        },
+        "total": {
+          "per_seed_mean_roc_auc": 0.874111,
+          "per_seed_std_roc_auc": 0.004122,
+          "per_seed_mean_mcc": 0.609671,
+          "per_seed_std_mcc": 0.007225,
+          "per_seed_mean_accuracy": 0.850113,
+          "per_seed_std_accuracy": 0.003123,
+          "per_seed_metrics": [
+            {
+              "roc_auc": 0.871337,
+              "mcc": 0.612134,
+              "accuracy": 0.851351
+            },
+            {
+              "roc_auc": 0.87454,
+              "mcc": 0.61612,
+              "accuracy": 0.852477
+            },
+            {
+              "roc_auc": 0.875688,
+              "mcc": 0.614225,
+              "accuracy": 0.851351
+            },
+            {
+              "roc_auc": 0.871701,
+              "mcc": 0.616832,
+              "accuracy": 0.853604
+            },
+            {
+              "roc_auc": 0.873787,
+              "mcc": 0.596535,
+              "accuracy": 0.844595
+            },
+            {
+              "roc_auc": 0.879701,
+              "mcc": 0.609081,
+              "accuracy": 0.849099
+            },
+            {
+              "roc_auc": 0.865065,
+              "mcc": 0.612134,
+              "accuracy": 0.851351
+            },
+            {
+              "roc_auc": 0.876601,
+              "mcc": 0.606877,
+              "accuracy": 0.849099
+            },
+            {
+              "roc_auc": 0.879835,
+              "mcc": 0.616234,
+              "accuracy": 0.853604
+            },
+            {
+              "roc_auc": 0.872855,
+              "mcc": 0.596535,
+              "accuracy": 0.844595
+            }
+          ]
+        }
+      },
+      "params": {
+        "lr": 0.0001205539974260236,
+        "lr_min_ratio": 0.24473827366070225,
+        "ema_decay": 0.9985746203653765,
+        "label_smoothing": 0.04275601088064168,
+        "head_dropout": 0.10188158297768714
+      }
+    }
+  ]
+}
